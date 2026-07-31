@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="晓彤的书屋">
+<title>晓彤的书屋 · 管理后台</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --blue:#3b82f6; --blue-dark:#2563eb; --blue-light:#eff6ff;
+  --green:#22c55e; --green-dark:#16a34a; --green-light:#f0fdf4;
+  --red:#ef4444; --red-light:#fef2f2;
+  --orange:#f59e0b; --orange-light:#fffbeb;
+  --bg:#f5f7fb; --card:#ffffff; --text:#1e2235; --text2:#8a8fa8; --line:#eef0f6;
+  --radius:14px; --shadow:0 2px 10px rgba(30,34,53,.05);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;max-width:960px;margin:0 auto;padding-bottom:calc(30px + env(safe-area-inset-bottom))}
+.hidden{display:none!important}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,select,textarea{font-family:inherit;font-size:16px;border:1.5px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;background:#fff;color:var(--text);outline:none}
+input:focus,select:focus{border-color:var(--blue)}
+label{font-size:.82rem;color:var(--text2);display:block;margin:10px 0 5px}
+
+/* ===== 顶部栏 ===== */
+.header{position:sticky;top:0;z-index:40;background:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 12px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 6px rgba(30,34,53,.06)}
+.header .menu-btn{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.25rem;color:var(--text);flex-shrink:0}
+.header .menu-btn:active{background:var(--bg)}
+.header h1{flex:1;text-align:center;font-size:1.08rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.header .sync-btn{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;box-shadow:0 2px 8px rgba(59,130,246,.35);position:relative}
+.header .sync-btn:active{opacity:.8}
+.header .sync-btn .sync-dot{position:absolute;top:0;right:0;width:10px;height:10px;border-radius:50%;border:2px solid #fff}
+.sync-dot.dirty{background:var(--orange)}.sync-dot.clean{background:var(--green)}
+.date-line{padding:10px 18px 0;font-size:.82rem;color:var(--text2)}
+
+/* ===== 抽屉 ===== */
+.drawer-mask{position:fixed;inset:0;background:rgba(20,22,40,.45);z-index:90;opacity:0;pointer-events:none;transition:opacity .25s}
+.drawer-mask.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;left:0;bottom:0;width:272px;max-width:82vw;background:#fff;z-index:91;transform:translateX(-100%);transition:transform .28s cubic-bezier(.32,.72,.35,1);display:flex;flex-direction:column;box-shadow:4px 0 24px rgba(0,0,0,.12)}
+.drawer.open{transform:translateX(0)}
+.drawer-head{padding:calc(24px + env(safe-area-inset-top)) 20px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px}
+.drawer-logo{width:52px;height:52px;border-radius:14px;box-shadow:0 4px 12px rgba(59,130,246,.25);object-fit:cover}
+.drawer-head .dn{font-size:1.05rem;font-weight:700}
+.drawer-head .dv{font-size:.72rem;color:var(--text2);margin-top:3px}
+.drawer-menu{flex:1;overflow-y:auto;padding:10px 0}
+.drawer-menu button{display:flex;align-items:center;gap:14px;width:100%;padding:13px 22px;font-size:.92rem;color:var(--text);text-align:left}
+.drawer-menu button .mi{width:26px;text-align:center;font-size:1.15rem}
+.drawer-menu button:active{background:var(--blue-light)}
+.drawer-menu button.active{background:var(--blue-light);color:var(--blue-dark);font-weight:600;border-right:3px solid var(--blue)}
+.drawer-foot{padding:14px 22px calc(14px + env(safe-area-inset-bottom));font-size:.68rem;color:#b6bacc;border-top:1px solid var(--line)}
+
+/* ===== 页面 ===== */
+.page{padding:12px 14px 0}
+@media(min-width:720px){.page{padding:12px 22px 0}}
+
+/* ===== 看板大卡片（截图风格） ===== */
+.big-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 20px 18px;margin-bottom:14px}
+.big-card .bc-label{font-size:.85rem;color:var(--text2)}
+.big-card .bc-num{font-size:2.6rem;font-weight:800;line-height:1.25;font-variant-numeric:tabular-nums}
+.big-card .bc-num.green{color:var(--green)}
+.big-card .bc-num.red{color:var(--red)}
+.big-card .bc-sub{font-size:.8rem;color:var(--text2);margin-top:2px}
+.bc-link{float:right;font-size:.75rem;color:var(--blue);padding:4px 8px}
+
+/* 迷你统计 2x2 */
+.mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+@media(min-width:720px){.mini-grid{grid-template-columns:repeat(4,1fr)}}
+.mini-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:13px 15px}
+.mini-card .mc-label{font-size:.72rem;color:var(--text2)}
+.mini-card .mc-value{font-size:1.18rem;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums}
+
+/* 柱状图 */
+.chart-wrap{position:relative;height:170px;margin-top:14px}
+.chart-grid{position:absolute;inset:0 0 26px 0;display:flex;flex-direction:column;justify-content:space-between}
+.chart-grid i{border-top:1px solid var(--line)}
+.chart-bars{position:absolute;inset:0 0 26px 0;display:flex;align-items:flex-end;justify-content:space-around;padding:0 6px}
+.chart-bar{width:26px;max-width:12%;background:linear-gradient(180deg,#60a5fa,var(--blue));border-radius:6px 6px 0 0;position:relative;transition:height .4s;min-height:3px}
+.chart-bar .bv{position:absolute;top:-17px;left:50%;transform:translateX(-50%);font-size:.58rem;color:var(--blue-dark);font-weight:700;white-space:nowrap}
+.chart-x{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-around;padding:0 6px}
+.chart-x span{width:26px;max-width:12%;text-align:center;font-size:.62rem;color:var(--text2)}
+
+/* 通用列表卡 */
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;margin-bottom:14px}
+.section-title{font-size:.92rem;font-weight:700;margin:4px 4px 10px;display:flex;justify-content:space-between;align-items:center}
+.section-title .more{font-size:.75rem;color:var(--blue);font-weight:500}
+.list-item{display:flex;align-items:center;padding:13px 16px;border-bottom:1px solid var(--line);gap:12px}
+.list-item:last-child{border-bottom:none}
+.list-item .icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.05rem;flex-shrink:0}
+.list-item .body{flex:1;min-width:0}
+.list-item .title{font-size:.88rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.list-item .desc{font-size:.73rem;color:var(--text2);margin-top:2px}
+.list-item .right{text-align:right;flex-shrink:0}
+/* 班级分组折叠面板 */
+.class-group{margin:0 0 10px;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.class-group-header{display:flex;align-items:center;padding:14px 16px;background:var(--card);gap:10px;cursor:pointer}
+.class-group-header:active{background:var(--bg)}
+.class-group-header .arrow{transition:transform .25s;font-size:.65rem;color:var(--text2);margin-right:2px}
+.class-group-header.open .arrow{transform:rotate(90deg)}
+.class-group-body{max-height:0;overflow:hidden;transition:max-height .35s ease}
+.class-group-body.open{max-height:3000px}
+.class-group-body .list-item{padding-left:30px}
+.class-summary{font-size:.7rem;color:var(--text2);margin-top:3px}
+.class-badge{font-size:.68rem;background:var(--blue-light);color:var(--blue-dark);padding:2px 8px;border-radius:6px;font-weight:600;white-space:nowrap}
+.amount{font-weight:700;font-variant-numeric:tabular-nums}
+.amount.in{color:var(--green-dark)} .amount.out{color:var(--red)}
+.chip{font-size:.65rem;padding:3px 10px;border-radius:8px;font-weight:600}
+.chip-red{background:#fee2e2;color:var(--red)}
+.chip-orange{background:#ffedd5;color:#ea580c}
+.chip-green{background:#dcfce7;color:var(--green-dark)}
+
+.empty{text-align:center;padding:34px 20px;color:var(--text2)}
+.empty .emoji{font-size:2.2rem;margin-bottom:8px}
+.empty p{font-size:.82rem;line-height:1.7}
+
+/* 课表周视图 */
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:12px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:14px}
+.week-day{text-align:center;min-width:0}
+.week-day .wd-name{font-size:.7rem;color:var(--text2);padding:4px 0;font-weight:600}
+.week-day.today .wd-name{color:var(--blue)}
+.course-chip{font-size:.6rem;background:var(--blue-light);color:var(--blue-dark);border-radius:6px;padding:4px 2px;margin-bottom:4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:600}
+.course-chip .ct{display:block;font-weight:400;opacity:.75}
+
+/* 日历 */
+.cal{padding:12px;background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:14px}
+.cal-head{display:grid;grid-template-columns:repeat(7,1fr);font-size:.68rem;color:var(--text2);text-align:center;padding-bottom:8px}
+.cal-body{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-cell{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;font-size:.8rem;position:relative;border:1.5px solid transparent}
+.cal-cell.today{border-color:var(--blue);font-weight:700;color:var(--blue)}
+.cal-cell.has-lesson{background:var(--green-light)}
+.cal-cell.marked-work{background:var(--blue-light)}
+.cal-cell.marked-rest{background:var(--red-light);color:var(--red)}
+.cal-cell.att-pending{background:var(--blue-light);color:var(--blue-dark)}
+.cal-cell.att-done{background:var(--green-light);color:#166534}
+/* 考勤卡 */
+.att-card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px 16px;margin-bottom:12px}
+.att-card .ac-head{display:flex;justify-content:space-between;align-items:center;font-size:.9rem;font-weight:700;margin-bottom:8px}
+.att-card .ac-sum{font-size:.76rem;color:var(--text2);margin-top:8px}
+.att-card .ac-sum b{color:var(--blue-dark)}
+.att-card .btn{margin-top:10px;width:100%}
+.stu-chip.off{opacity:.45;text-decoration:line-through}
+.cal-cell .dots{display:flex;gap:2px;margin-top:2px;height:5px}
+.cal-cell .dots i{width:5px;height:5px;border-radius:50%;background:var(--green)}
+.cal-cell.selected{border-color:var(--blue);background:var(--blue-light)}
+
+/* FAB */
+.fab{position:fixed;right:18px;bottom:calc(26px + env(safe-area-inset-bottom));width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-size:1.55rem;box-shadow:0 6px 18px rgba(59,130,246,.4);z-index:40;display:flex;align-items:center;justify-content:center}
+@media(min-width:960px){.fab{right:calc(50% - 460px)}}
+
+/* 弹窗 */
+.modal-mask{position:fixed;inset:0;background:rgba(20,22,40,.5);z-index:100;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .2s}
+@media(min-width:720px){.modal-mask{align-items:center}}
+.modal{background:#fff;width:100%;max-width:520px;max-height:88vh;border-radius:20px 20px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));overflow-y:auto;animation:slideUp .25s}
+@media(min-width:720px){.modal{border-radius:20px}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{transform:translateY(40px);opacity:.6}to{transform:translateY(0);opacity:1}}
+.modal h3{font-size:1.02rem;margin-bottom:6px}
+.modal .m-sub{font-size:.76rem;color:var(--text2);margin-bottom:8px}
+.m-actions{display:flex;gap:10px;margin-top:18px}
+.btn{flex:1;padding:13px;border-radius:12px;font-size:.9rem;font-weight:600;text-align:center}
+.btn-primary{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff}
+.btn-ghost{background:#f1f2f8;color:var(--text)}
+.btn-danger{background:var(--red-light);color:var(--red)}
+.btn-sm{padding:7px 14px;font-size:.76rem;border-radius:8px;flex:none}
+
+.stu-check{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.stu-chip{padding:9px 16px;border-radius:20px;border:1.5px solid var(--line);font-size:.84rem;background:#fff;font-weight:500}
+.stu-chip.on{border-color:var(--blue);background:var(--blue-light);color:var(--blue-dark);font-weight:600}
+
+.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+.cat-item{padding:10px 4px;border-radius:12px;border:1.5px solid var(--line);text-align:center;font-size:.76rem;background:#fff}
+.cat-item .ce{font-size:1.2rem;display:block;margin-bottom:3px}
+.cat-item.on{border-color:var(--red);background:var(--red-light);font-weight:600}
+
+/* 排课日期选择器 */
+.dp-cal{border:1.5px solid var(--line);border-radius:12px;padding:10px;margin-top:4px}
+.dp-head{display:flex;justify-content:space-between;align-items:center;padding-bottom:8px}
+.dp-head button{color:var(--blue);font-size:1.05rem;width:30px;height:30px}
+.dp-head b{font-size:.85rem}
+.dp-wd{display:grid;grid-template-columns:repeat(7,1fr);font-size:.65rem;color:var(--text2);text-align:center;padding-bottom:6px}
+.dp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.dp-cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:.78rem;border:1.5px solid transparent}
+.dp-cell[data-d]{cursor:pointer}
+.dp-cell.dp-today{border-color:var(--line)}
+.dp-cell.dp-on{background:var(--blue);color:#fff;font-weight:700}
+.seg{display:flex;background:#f1f2f8;border-radius:10px;padding:3px;margin-top:4px}
+.seg button{flex:1;padding:9px;border-radius:8px;font-size:.8rem;color:var(--text2);font-weight:500}
+.seg button.on{background:#fff;color:var(--blue-dark);font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.ocr-progress{background:var(--blue-light);border-radius:12px;padding:14px;margin-top:10px;font-size:.8rem;color:var(--blue-dark)}
+.ocr-progress .bar{height:6px;background:#fff;border-radius:3px;margin-top:8px;overflow:hidden}
+.ocr-progress .bar i{display:block;height:100%;background:var(--blue);transition:width .3s}
+.ocr-result-box{background:#f8f9fd;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:.7rem;color:var(--text2);max-height:120px;overflow-y:auto;white-space:pre-wrap;margin-top:8px}
+.cand-item{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px}
+.cand-item.on{border-color:var(--blue);background:var(--blue-light)}
+.cand-item .ci-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.cand-item select,.cand-item input{width:auto;flex:1;min-width:70px;padding:7px 8px;font-size:.84rem}
+
+.tag{font-size:.62rem;padding:2px 8px;border-radius:8px;font-weight:600}
+.tag-work{background:var(--blue-light);color:var(--blue-dark)}
+.tag-rest{background:var(--red-light);color:var(--red)}
+.toast{position:fixed;top:calc(20px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);background:#1e2235;color:#fff;padding:10px 22px;border-radius:24px;font-size:.8rem;z-index:200;animation:fadeIn .2s;box-shadow:0 4px 16px rgba(0,0,0,.25);white-space:nowrap}
+.month-switch{display:flex;align-items:center;gap:4px;justify-content:center;padding:10px 0 2px}
+.month-switch button{color:var(--blue);font-size:1.1rem;width:32px;height:32px}
+.month-switch span{font-size:.9rem;font-weight:700;min-width:90px;text-align:center}
+</style>
+</head>
+<body>
+
+<!-- ===== 顶部栏 ===== -->
+<div class="header">
+  <button class="menu-btn" onclick="openDrawer()">☰</button>
+  <h1 id="header-title">晓彤的书屋 · 管理后台</h1>
+  <button class="sync-btn" onclick="doSync()" id="header-sync-btn" title="云同步">☁️<span class="sync-dot" id="header-sync-dot"></span></button>
+</div>
+
+<!-- ===== 抽屉 ===== -->
+<div class="drawer-mask" id="drawer-mask" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <img class="drawer-logo" src="icon-192.png" alt="logo">
+    <div>
+      <div class="dn" id="drawer-name">晓彤的书屋</div>
+      <div class="dv">管理后台 <span id="ver-tag">v1.13.3</span></div>
+    </div>
+  </div>
+  <div class="drawer-menu" id="drawer-menu">
+    <button data-page="dash" class="active" onclick="go('dash')"><span class="mi">📊</span>工作台</button>
+    <button data-page="lesson" onclick="go('lesson')"><span class="mi">✅</span>考勤管理（记课）</button>
+    <button data-page="schedule" onclick="go('schedule')"><span class="mi">🗓️</span>课程表</button>
+    <button data-page="expense" onclick="go('expense')"><span class="mi">💰</span>收费管理（收支）</button>
+    <button data-page="me" onclick="go('me')"><span class="mi">🧑‍🎓</span>学生资料</button>
+    <button data-page="me2" onclick="go('me','workday')"><span class="mi">📅</span>上班备注</button>
+    <button data-page="me3" onclick="go('me','setting')"><span class="mi">⚙️</span>设置与数据</button>
+    <button id="sync-btn" onclick="closeDrawer();doSync()"><span class="mi">☁️</span>云同步</button>
+  </div>
+  <div class="drawer-foot">© 2026 晓彤的书屋</div>
+</div>
+
+<!-- ===== 工作台 ===== -->
+<div id="page-dash">
+  <div class="date-line" id="dash-date"></div>
+  <div class="page">
+    <!-- 今日考勤率 -->
+    <div class="big-card">
+      <span class="bc-link" onclick="go('lesson')">去记课 ›</span>
+      <div class="bc-label">今日课程完成率</div>
+      <div class="bc-num green" id="today-rate">—</div>
+      <div class="bc-sub" id="today-rate-sub"></div>
+    </div>
+    <!-- 待办提醒 -->
+    <div class="big-card">
+      <span class="bc-link" onclick="go('lesson')">处理 ›</span>
+      <div class="bc-label">待办提醒</div>
+      <div class="bc-num red" id="todo-num">0</div>
+      <div class="bc-sub" id="todo-sub"></div>
+    </div>
+    <!-- 近7日收入柱状图 -->
+    <div class="big-card">
+      <span class="bc-link" onclick="shiftMonth(0)">本月 ›</span>
+      <div class="bc-label">近 7 日收入趋势</div>
+      <div class="chart-wrap">
+        <div class="chart-grid"><i></i><i></i><i></i><i></i></div>
+        <div class="chart-bars" id="chart-bars"></div>
+        <div class="chart-x" id="chart-x"></div>
+      </div>
+    </div>
+    <!-- 本月统计 -->
+    <div class="month-switch">
+      <button onclick="shiftMonth(-1)">‹</button>
+      <span id="dash-month"></span>
+      <button onclick="shiftMonth(1)">›</button>
+    </div>
+    <div class="mini-grid" id="stat-grid"></div>
+  </div>
+</div>
+
+<!-- ===== 课程表 ===== -->
+<div id="page-schedule" class="hidden">
+  <div class="page" style="padding-top:14px">
+    <div class="cal" id="sched-cal"></div>
+    <div style="font-size:.68rem;color:var(--text2);padding:0 4px 10px">🔵 蓝底=已排课未考勤 · 🟢 绿底=已考勤 · 无排课默认休息</div>
+    <div class="section-title" id="sched-day-title">当日课程考勤</div>
+    <div id="att-list"></div>
+    <div class="section-title">全部课程
+      <span class="more" onclick="openOcrModal()">📷 拍照导入</span>
+    </div>
+    <div class="card" id="course-list"></div>
+  </div>
+  <button class="fab" onclick="openCourseModal()">＋</button>
+</div>
+
+<!-- ===== 记课（考勤） ===== -->
+<div id="page-lesson" class="hidden">
+  <div class="page" style="padding-top:14px">
+    <div class="cal" id="lesson-cal"></div>
+    <div class="section-title" id="lesson-day-title">当日课程</div>
+    <div class="card" id="day-course-list"></div>
+    <div class="section-title">学生课时统计（消耗 & 剩余）</div>
+    <div class="card" id="stu-lesson-stats"></div>
+  </div>
+</div>
+
+<!-- ===== 支出（收费） ===== -->
+<div id="page-expense" class="hidden">
+  <div class="page" style="padding-top:14px">
+    <div class="month-switch">
+      <button onclick="shiftMonth(-1)">‹</button>
+      <span id="exp-month"></span>
+      <button onclick="shiftMonth(1)">›</button>
+    </div>
+    <div class="mini-grid" id="exp-stat"></div>
+    <div class="section-title">支出明细</div>
+    <div class="card" id="expense-list"></div>
+  </div>
+  <button class="fab" onclick="openExpenseModal()">＋</button>
+</div>
+
+<!-- ===== 我的（学生资料/设置） ===== -->
+<div id="page-me" class="hidden">
+  <div class="page" style="padding-top:14px">
+    <div class="section-title">机构信息</div>
+    <div class="card">
+      <div class="list-item" onclick="openOrgModal()">
+        <div class="icon" style="background:var(--blue-light)">🏫</div>
+        <div class="body"><div class="title" id="org-name-line">晓彤的书屋</div><div class="desc">点我修改机构名称</div></div>
+        <div class="right"><span class="chip chip-green">编辑</span></div>
+      </div>
+    </div>
+    <div class="section-title">学生管理 <span class="more" onclick="openStudentModal()">＋ 添加学生</span></div>
+    <div class="card" id="student-list"></div>
+    <div class="section-title" id="workday-anchor">每月上班日期备注</div>
+    <div class="cal" id="work-cal"></div>
+    <div style="font-size:.7rem;color:var(--text2);padding:6px 4px 12px">📅 自动根据课表判断：<span class="tag tag-work">蓝底=有排课，自动算上班</span> · 无排课默认休息</div>
+    <div class="section-title" id="setting-anchor">数据</div>
+    <div class="card">
+      <div class="list-item" style="flex-direction:column;align-items:stretch;gap:8px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="icon" style="background:var(--blue-light)">☁️</div>
+          <div class="body"><div class="title">云端同步</div><div class="desc" id="sync-badge">☁️ 未开启云同步</div></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="doSync()">立即同步</button>
+          <button class="btn btn-ghost btn-sm" onclick="openSyncSetup()">设置钥匙</button>
+          <button class="btn btn-ghost btn-sm" onclick="copySyncKey()">复制钥匙</button>
+          <button class="btn btn-danger btn-sm" onclick="disableSync()">关闭</button>
+        </div>
+      </div>
+      <div class="list-item" onclick="exportForBaidu()"><div class="icon" style="background:var(--orange-light)">💾</div><div class="body"><div class="title">备份到百度云盘</div><div class="desc">下载 JSON 文件，手动上传到百度云盘保存</div></div></div>
+      <div class="list-item" onclick="document.getElementById('import-file').click()"><div class="icon" style="background:var(--green-light)">📥</div><div class="body"><div class="title">导入备份</div><div class="desc">从 JSON 文件恢复</div></div></div>
+      <div class="list-item" onclick="clearData()"><div class="icon" style="background:var(--red-light)">🗑️</div><div class="body"><div class="title" style="color:var(--red)">清空全部数据</div><div class="desc">不可恢复，请谨慎</div></div></div>
+    </div>
+    <input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(event)">
+    <div style="height:20px"></div>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+/* ================= 数据层（IndexedDB + 云端同步） ================= */
+const KEY='kgj_data_v1';           // 旧 localStorage 键（迁移用）
+const IDB_NAME='kgj_db', IDB_STORE='kv';
+const APP_VER='v1.13.3';
+const CATS=[{k:'油费',e:'⛽'},{k:'停车费',e:'🅿️'},{k:'过路费',e:'🛣️'},{k:'餐费',e:'🍜'},{k:'教具',e:'📚'},{k:'其他',e:'📦'}];
+const WD=['一','二','三','四','五','六','日'];
+const DEFAULT_ORG='晓彤的书屋';
+
+function blankDB(){return {students:[],courses:[],lessons:[],expenses:[],dayMarks:{},settings:{orgName:DEFAULT_ORG}};}
+let DB=blankDB();          // 内存中的数据（渲染都读它）
+let META={syncKey:'',updatedAt:0};
+
+/* ---- IndexedDB 基础 ---- */
+let _idb=null;
+function idb(){
+  if(_idb)return Promise.resolve(_idb);
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(IDB_NAME,1);
+    r.onupgradeneeded=e=>{e.target.result.createObjectStore(IDB_STORE);};
+    r.onsuccess=e=>{_idb=e.target.result;res(_idb);};
+    r.onerror=e=>rej(e.target.error);
+  });
+}
+async function idbGet(k){
+  const db=await idb();
+  return new Promise((res,rej)=>{
+    const t=db.transaction(IDB_STORE,'readonly').objectStore(IDB_STORE).get(k);
+    t.onsuccess=()=>res(t.result);t.onerror=()=>rej(t.error);
+  });
+}
+async function idbSet(k,v){
+  const db=await idb();
+  return new Promise((res,rej)=>{
+    const t=db.transaction(IDB_STORE,'readwrite').objectStore(IDB_STORE).put(v,k);
+    t.onsuccess=()=>res();t.onerror=()=>rej(t.error);
+  });
+}
+
+/* ---- 数据规范化（含旧格式迁移） ---- */
+function normalize(d){
+  const out=Object.assign(blankDB(),d||{});
+  if(!out.settings)out.settings={orgName:DEFAULT_ORG};
+  if(out.settings.orgName==='树苗培优中心')out.settings.orgName=DEFAULT_ORG;
+  out.courses.forEach(c=>{
+    if(!c.weekdays){c.weekdays=c.weekday?[c.weekday]:[];delete c.weekday;}
+    if(!c.mode)c.mode='weekly';
+    if(!c.dates)c.dates=[];
+    if(c.rate!==undefined&&c.classRate===undefined){c.classRate=c.rate;delete c.rate;}
+    if(!c.classRate)c.classRate=0;
+    if(!c.perStudentRate)c.perStudentRate=0;
+    if(!c.priceMode)c.priceMode='total';
+    if(!c.totalLessons)c.totalLessons=0;
+  });
+  // 清理学生旧字段（课时由班级统一管理）
+  out.students.forEach(s=>{delete s.totalLessons;delete s.rate;});
+  return out;
+}
+
+/* ---- 启动：IndexedDB 读数据，旧 localStorage 自动迁移 ---- */
+async function initDB(){
+  try{
+    let d=await idbGet('data');
+    if(!d){
+      const legacy=localStorage.getItem(KEY);
+      if(legacy){d=JSON.parse(legacy);await idbSet('data',d);} // 迁移旧数据
+    }
+    DB=normalize(d);
+    const m=await idbGet('meta');
+    if(m)META=Object.assign(META,m);
+  }catch(e){console.warn('IDB 初始化失败，退回内存模式',e);DB=blankDB();}
+  render();
+}
+
+/* ---- 保存：写 IndexedDB + 更新时间戳 + 标记待同步 ---- */
+function save(){
+  META.updatedAt=Date.now();
+  META.dirty=true;
+  idbSet('data',DB).catch(e=>console.warn(e));
+  idbSet('meta',META).catch(e=>console.warn(e));
+  updateSyncBadge();
+}
+function coursePrice(c){ return c.classRate||c.perStudentRate*c.studentIds.length||0; }
+/* 课程在某天是否排课：指定日期 或 每周重复 */
+function courseOnDate(c,ds){
+  if(c.dates&&c.dates.includes(ds))return true;
+  if(c.mode==='dates')return false;
+  const wd=(new Date(ds+'T12:00:00').getDay()+6)%7+1;
+  return c.weekdays.includes(wd);
+}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function pad(n){return String(n).padStart(2,'0');}
+function dstr(y,m,d){return y+'-'+pad(m+1)+'-'+pad(d);}
+function todayStr(){const t=new Date();return dstr(t.getFullYear(),t.getMonth(),t.getDate());}
+function fmtMoney(n){return '¥'+(Math.round(n*100)/100).toLocaleString('zh-CN');}
+function stuName(id){const s=DB.students.find(x=>x.id===id);return s?s.name:'已删学生';}
+function stuRate(id){const c=DB.courses.find(c=>c.studentIds.includes(id));return c?c.classRate||0:0;}
+function stuUsedLessons(id){return DB.lessons.reduce((n,l)=>n+(l.studentIds.includes(id)?1:0),0);}
+function stuRemaining(id){
+  const cls=DB.courses.find(c=>c.studentIds.includes(id));
+  if(!cls||!cls.totalLessons)return null;
+  return cls.totalLessons-stuUsedLessons(id);
+}
+/* 学生在哪个课程/班级中（返回课程ID，null=未分配） */
+function stuClass(id){const c=DB.courses.find(c=>c.studentIds.includes(id));return c?c.id:null;}
+/* 获取当前课程可选学生：本班已有 + 未分配班级的 */
+function availStudents(excludeCourseId){
+  const exclude=excludeCourseId||null;
+  return DB.students.filter(s=>{const cls=stuClass(s.id);return !cls||cls===exclude;});
+}
+function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1800);}
+
+let viewM=(()=>{const t=new Date();return{y:t.getFullYear(),m:t.getMonth()};})();
+let selDate=todayStr();
+let workCalM=(()=>{const t=new Date();return{y:t.getFullYear(),m:t.getMonth()};})();
+function shiftMonth(d){viewM.m+=d;if(viewM.m<0){viewM.m=11;viewM.y--;}if(viewM.m>11){viewM.m=0;viewM.y++;}renderDash();renderExpense();}
+function shiftWorkMonth(d){workCalM.m+=d;if(workCalM.m<0){workCalM.m=11;workCalM.y--;}if(workCalM.m>11){workCalM.m=0;workCalM.y++;}renderWorkCal();}
+
+/* ================= 统计 ================= */
+function monthStats(y,m){
+  const pre=y+'-'+pad(m+1);
+  const lessons=DB.lessons.filter(l=>l.date.startsWith(pre));
+  const expenses=DB.expenses.filter(e=>e.date.startsWith(pre));
+  const income=lessons.reduce((s,l)=>s+l.income,0);
+  const expense=expenses.reduce((s,e)=>s+e.amount,0);
+  const personTimes=lessons.reduce((s,l)=>s+l.studentIds.length,0);
+  const workDays=new Set();
+  // 有排课的日期自动算上班
+  DB.courses.forEach(c=>{
+    if(c.mode==='weekly'){
+      // 遍历该月每一天检查是否排课
+      const first=new Date(y,m,1),days=new Date(y,m+1,0).getDate();
+      for(let d=1;d<=days;d++){
+        const ds=dstr(y,m,d);
+        if(courseOnDate(c,ds))workDays.add(ds);
+      }
+    }else if(c.mode==='dates'){
+      c.dates.forEach(ds=>{if(ds.startsWith(pre))workDays.add(ds);});
+    }
+  });
+  // 有上课记录的也加入
+  lessons.forEach(l=>workDays.add(l.date));
+  const usage={};
+  lessons.forEach(l=>l.studentIds.forEach(id=>{usage[id]=(usage[id]||0)+1;}));
+  return {lessons,expenses,income,expense,net:income-expense,lessonCount:lessons.length,personTimes,workDayCount:workDays.size,usage};
+}
+/* 今日课程完成情况 */
+function todayProgress(){
+  const ds=todayStr();
+  const dayCourses=DB.courses.filter(c=>courseOnDate(c,ds));
+  const done=DB.lessons.filter(l=>l.date===ds&&l.courseId).map(l=>l.courseId);
+  const doneCount=dayCourses.filter(c=>done.includes(c.id)).length;
+  return {total:dayCourses.length,done:doneCount,todo:dayCourses.length-doneCount};
+}
+
+/* ================= 抽屉导航 ================= */
+const PAGES=['dash','schedule','lesson','expense','me'];
+function openDrawer(){document.getElementById('drawer').classList.add('open');document.getElementById('drawer-mask').classList.add('open');}
+function closeDrawer(){document.getElementById('drawer').classList.remove('open');document.getElementById('drawer-mask').classList.remove('open');}
+function go(p,anchor){
+  closeDrawer();
+  PAGES.forEach(x=>document.getElementById('page-'+x).classList.toggle('hidden',x!==p));
+  document.querySelectorAll('#drawer-menu button').forEach(b=>b.classList.toggle('active',b.dataset.page===p));
+  window.scrollTo(0,0);
+  if(anchor==='workday')setTimeout(()=>document.getElementById('workday-anchor').scrollIntoView({behavior:'smooth'}),80);
+  if(anchor==='setting')setTimeout(()=>document.getElementById('setting-anchor').scrollIntoView({behavior:'smooth'}),80);
+  render();
+}
+function render(){renderOrg();renderDash();renderSchedule();renderLesson();renderExpense();renderMe();updateSyncBadge();}
+
+/* ================= 机构名 ================= */
+function renderOrg(){
+  const n=DB.settings.orgName||DEFAULT_ORG;
+  document.getElementById('header-title').textContent=n+' · 管理后台';
+  document.getElementById('drawer-name').textContent=n;
+  document.getElementById('org-name-line').textContent=n;
+  document.title=n+' · 管理后台';
+}
+function openOrgModal(){
+  openModal(`
+    <h3>🏫 机构名称</h3>
+    <div class="m-sub">显示在顶部标题和抽屉菜单里</div>
+    <label>名称</label>
+    <input id="of-name" value="${DB.settings.orgName||DEFAULT_ORG}" placeholder="如：晓彤的书屋">
+    <div class="m-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveOrg()">保存</button>
+    </div>`);
+}
+function saveOrg(){
+  const n=document.getElementById('of-name').value.trim();
+  if(!n)return toast('请填写名称');
+  DB.settings.orgName=n;save();closeModal();renderOrg();toast('已保存 ✓');
+}
+
+/* ================= 工作台 ================= */
+function renderDash(){
+  const t=new Date();
+  document.getElementById('dash-date').textContent=`${t.getMonth()+1}月${t.getDate()}日 星期${WD[(t.getDay()+6)%7]}`;
+  // 今日完成率
+  const tp=todayProgress();
+  const rateEl=document.getElementById('today-rate');
+  const subEl=document.getElementById('today-rate-sub');
+  if(tp.total===0){rateEl.textContent='—';subEl.textContent='今天课表没有安排课程';}
+  else{rateEl.textContent=Math.round(tp.done/tp.total*100)+'%';subEl.textContent=`已记 ${tp.done} / ${tp.total} 节课`;}
+  // 待办
+  document.getElementById('todo-num').textContent=tp.todo;
+  document.getElementById('todo-sub').textContent=tp.todo>0?`今日还有 ${tp.todo} 节课未记`:'今日课程已全部记录 🎉';
+  // 近7日柱图
+  const bars=[],xs=[];
+  let max=1;
+  const days=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(t);d.setDate(t.getDate()-i);
+    const ds=dstr(d.getFullYear(),d.getMonth(),d.getDate());
+    const inc=DB.lessons.filter(l=>l.date===ds).reduce((s,l)=>s+l.income,0);
+    days.push({ds,inc,label:pad(d.getMonth()+1)+'-'+pad(d.getDate())});
+    if(inc>max)max=inc;
+  }
+  days.forEach(d=>{
+    const h=Math.round(d.inc/max*100);
+    bars.push(`<div class="chart-bar" style="height:${Math.max(h,3)}%">${d.inc?`<span class="bv">${d.inc}</span>`:''}</div>`);
+    xs.push(`<span>${d.label.slice(3)==='01'?d.label:d.label}</span>`);
+  });
+  document.getElementById('chart-bars').innerHTML=bars.join('');
+  document.getElementById('chart-x').innerHTML=xs.join('');
+  // 本月统计
+  const {y,m}=viewM;
+  document.getElementById('dash-month').textContent=y+'年'+(m+1)+'月';
+  const s=monthStats(y,m);
+  document.getElementById('stat-grid').innerHTML=`
+    <div class="mini-card"><div class="mc-label">总收入</div><div class="mc-value" style="color:var(--green-dark)">${fmtMoney(s.income)}</div></div>
+    <div class="mini-card"><div class="mc-label">总支出</div><div class="mc-value" style="color:var(--red)">${fmtMoney(s.expense)}</div></div>
+    <div class="mini-card"><div class="mc-label">净收入</div><div class="mc-value" style="color:${s.net>=0?'var(--blue-dark)':'var(--red)'}">${fmtMoney(s.net)}</div></div>
+    <div class="mini-card"><div class="mc-label">上课 / 工作</div><div class="mc-value">${s.lessonCount}节 · ${s.workDayCount}天</div></div>`;
+}
+
+/* ================= 课表 ================= */
+let schedDate=todayStr();
+let schedCalM=(()=>{const t=new Date();return{y:t.getFullYear(),m:t.getMonth()};})();
+let attState={};
+function shiftSchedMonth(d){schedCalM.m+=d;if(schedCalM.m<0){schedCalM.m=11;schedCalM.y--;}if(schedCalM.m>11){schedCalM.m=0;schedCalM.y++;}renderSchedule();}
+function renderSchedule(){
+  // 月历（有课=蓝底自动上班，绿点=已登记，蓝点=有排课）
+  document.getElementById('sched-cal').innerHTML=calHTML(schedCalM.y,schedCalM.m,schedDate,true).replace(/shiftMonth\(/g,'shiftSchedMonth(');
+  renderDayAtt();
+  const sorted=[...DB.courses].sort((a,b)=>(a.weekdays[0]||9)-(b.weekdays[0]||9)||a.time.localeCompare(b.time));
+  document.getElementById('course-list').innerHTML=sorted.length?sorted.map(c=>{
+    const n=c.studentIds.length;
+    const when=c.mode==='dates'
+      ?`📅 指定日期（${c.dates.length}天）：${c.dates.slice(0,3).map(d=>d.slice(5).replace('-','/')).join('、')}${c.dates.length>3?' 等':''} ${c.time}`
+      :`🔁 周${c.weekdays.map(w=>WD[w-1]).join('、')} ${c.time}`;
+    return `<div class="list-item">
+      <div class="icon" style="background:var(--blue-light)">📖</div>
+      <div class="body">
+        <div class="title">${c.name} <span class="chip chip-green">${n?n+'人班':'未排学生'}</span></div>
+        <div class="desc">${when}</div>
+        <div class="desc">${c.studentIds.map(stuName).join('、')||'—'} · 每节合计 <b style="color:var(--blue-dark)">${fmtMoney(coursePrice(c))}</b></div>
+      </div>
+      <div class="right">
+        <button class="btn btn-ghost btn-sm" onclick="openCourseModal(DB.courses.find(x=>x.id==='${c.id}'))">编辑</button>
+        <button class="btn btn-danger btn-sm" onclick="delCourse('${c.id}')">删</button>
+      </div>
+    </div>`;}).join(''):`<div class="empty"><div class="emoji">🗓️</div><p>还没有课程<br>点右下角 ＋ 添加：可按星期循环，也可在日历上点日期</p></div>`;
+}
+function delCourse(id){if(!confirm('删除这门课？历史上课记录会保留。'))return;DB.courses=DB.courses.filter(c=>c.id!==id);save();renderSchedule();}
+
+/* ===== 当日课程考勤登记 ===== */
+function renderDayAtt(){
+  const ds=schedDate;
+  const t=new Date(ds+'T12:00:00');
+  const wd=(t.getDay()+6)%7;
+  document.getElementById('sched-day-title').innerHTML=`${ds.slice(5).replace('-','月')}日 周${WD[wd]} · 课程与学生安排`;
+  const dayCourses=DB.courses.filter(c=>courseOnDate(c,ds)).sort((a,b)=>a.time.localeCompare(b.time));
+  attState={};
+  if(!dayCourses.length){
+    document.getElementById('att-list').innerHTML=`<div class="card"><div class="empty"><div class="emoji">🍃</div><p>这天没有排课，默认休息日<br>点右下角 ＋ 可以给这天排课</p></div></div>`;
+    return;
+  }
+  document.getElementById('att-list').innerHTML=dayCourses.map(c=>{
+    const lesson=DB.lessons.find(l=>l.date===ds&&l.courseId===c.id);
+    const att=new Set(lesson?lesson.studentIds:c.studentIds);
+    attState[c.id]=att;
+    const stuChips=c.studentIds.map(sid=>{
+      const rem=stuRemaining(sid);
+      const remTag=rem!==null?` <span style="opacity:.6;font-size:.65rem">剩${rem}节</span>`:'';
+      return `<button class="stu-chip ${att.has(sid)?'on':'off'}" data-cid="${c.id}" data-sid="${sid}" onclick="toggleAtt(this)">${stuName(sid)}${remTag}</button>`;
+    }).join('');
+    return `<div class="att-card">
+      <div class="ac-head">
+        <span>${c.time} ${c.name}</span>
+        ${lesson?`<span class="chip chip-green">已记 ${fmtMoney(lesson.income)}</span>`:'<span class="chip chip-orange">待登记</span>'}
+      </div>
+      <div style="font-size:.72rem;color:var(--text2);margin-bottom:6px">本班 ${c.studentIds.length} 人 · 点学生切换 出勤/请假</div>
+      <div class="stu-check">${stuChips||'<span style="font-size:.8rem;color:var(--text2)">本班未排学生，点下方「编辑」在课程里登记</span>'}</div>
+      <div class="ac-sum" id="att-sum-${c.id}"></div>
+      <button class="btn btn-primary" onclick="saveAttendance('${c.id}')">${lesson?'更新考勤':'登记考勤'} ＋收入</button>
+    </div>`;}).join('');
+  dayCourses.forEach(c=>updAttSum(c.id));
+}
+function toggleAtt(btn){
+  const cid=btn.dataset.cid,sid=btn.dataset.sid;
+  const att=attState[cid];
+  if(att.has(sid)){att.delete(sid);btn.classList.remove('on');btn.classList.add('off');}
+  else{att.add(sid);btn.classList.add('on');btn.classList.remove('off');}
+  updAttSum(cid);
+}
+function updAttSum(cid){
+  const att=attState[cid];
+  const el=document.getElementById('att-sum-'+cid);
+  if(!el||!att)return;
+  const c=DB.courses.find(x=>x.id===cid);
+  const total=c?c.studentIds.length:0;
+  const absent=Math.max(0,total-att.size);
+  const sum=c.priceMode==='per'?att.size*(c.perStudentRate||0):(c.classRate||0);
+  const label=c.priceMode==='per'?`${att.size}人 × ${fmtMoney(c.perStudentRate||0)} = ${fmtMoney(sum)}`:`总价 ${fmtMoney(sum)}`;
+  el.innerHTML=`✅ 出勤 <b>${att.size}</b> 人${absent?` · 🙋 请假 <b>${absent}</b> 人`:''} · ${label}`;
+}
+function saveAttendance(cid){
+  const ds=schedDate;
+  const c=DB.courses.find(x=>x.id===cid);
+  const att=[...attState[cid]];
+  if(!att.length){
+    // 全部请假：若已有记录则删除（本节取消）
+    const exist=DB.lessons.find(l=>l.date===ds&&l.courseId===cid);
+    if(exist&&confirm('全班请假，取消这节课的记录？')){DB.lessons=DB.lessons.filter(l=>l.id!==exist.id);save();renderSchedule();renderDash();toast('已取消该课记录');}
+    else toast('全班请假，未登记收入');
+    return;
+  }
+  // 收入：总价模式=班级总价，单价模式=出勤×每人单价
+  const income=c.priceMode==='per'?att.length*(c.perStudentRate||0):(c.classRate||0);
+  const exist=DB.lessons.find(l=>l.date===ds&&l.courseId===cid);
+  if(exist){exist.studentIds=att;exist.income=income;toast(`考勤已更新，收入 ${fmtMoney(income)} ✓`);}
+  else{DB.lessons.push({id:uid(),date:ds,courseId:cid,title:c.name,studentIds:att,income});toast(`已登记，收入 +${fmtMoney(income)} 🎉`);}
+  // 考勤保存后自动刷新
+  save();renderSchedule();renderDash();
+}
+/* 自动联动：上课备注。有排课即为上班（日历渲染时自动判断） */
+function autoMarkWorkDay(ds){
+  // 已废弃：上班备注自动根据排课计算，不再需要手动存储
+}
+
+let editingCourse=null;
+function openCourseModal(c){
+  editingCourse=c||null;
+  if(!DB.students.length){toast('请先在「学生资料」里添加学生');}
+  const cands=c?c.studentIds:[];
+  const cWds=c?c.weekdays:[];
+  cfMode=c?c.mode:'weekly';
+  cfDates=new Set(c?c.dates:[]);
+  cfCalM=(()=>{const t=new Date();return{y:t.getFullYear(),m:t.getMonth()};})();
+  const priceMode=c?c.priceMode||'total':'total';
+  const totalPrice=c?c.classRate||'':'';
+  const perPrice=c?c.perStudentRate||'':'';
+  openModal(`
+    <h3>${c?'编辑':'添加'}课程（班级）</h3>
+    <div class="m-sub">如「初中物理班」：按星期循环，或直接在日历上点日期</div>
+    <label>课程名称</label>
+    <input id="cf-name" placeholder="如：初中物理 / 钢琴课" value="${c?c.name:''}">
+    <label>排课方式</label>
+    <div class="seg" id="cf-seg">
+      <button data-m="weekly" class="${cfMode==='weekly'?'on':''}" onclick="setCfMode('weekly')">🔁 按星期重复</button>
+      <button data-m="dates" class="${cfMode==='dates'?'on':''}" onclick="setCfMode('dates')">📅 日历选日期</button>
+    </div>
+    <div id="cf-weekly-box" class="${cfMode==='weekly'?'':'hidden'}">
+      <label>每周哪几天上课（可多选，一次排好）</label>
+      <div class="stu-check" id="cf-wds">
+        ${WD.map((w,i)=>`<button class="stu-chip ${cWds.includes(i+1)?'on':''}" data-wd="${i+1}" onclick="this.classList.toggle('on')">周${w}</button>`).join('')}
+      </div>
+    </div>
+    <div id="cf-dates-box" class="${cfMode==='dates'?'':'hidden'}">
+      <label>在日历上点选上课日期（可跨月多点）</label>
+      <div id="cf-dpicker"></div>
+      <div class="stu-check" id="cf-dates-chips" style="margin-top:8px"></div>
+    </div>
+    <label>几点上课</label>
+    <input id="cf-time" type="time" value="${c?c.time:'10:00'}">
+    <label>本班学生（勾选后，记课时按出勤人数自动算钱）</label>
+    <div class="m-sub">每个学生只能在一个班级里，已分到其他班的不会显示</div>
+    <div class="stu-check" id="cf-stus">
+      ${(()=>{const avail=availStudents(c?c.id:null);return avail.length?avail.map(s=>{const rem=stuRemaining(s.id);const remTag=rem!==null?`<span style="opacity:.6;font-size:.65rem">剩${rem}</span>`:'';return `<button class="stu-chip ${cands.includes(s.id)?'on':''}" data-id="${s.id}" data-rate="${s.rate}" onclick="this.classList.toggle('on');updCfSum()">${s.name}${remTag}</button>`;}).join(''):'<span style="font-size:.8rem;color:var(--text2)">还没有空闲学生，先在下方登记新学生</span>';})()}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
+      <input id="cf-new-name" placeholder="新学生姓名" style="flex:2;padding:8px 10px;font-size:.85rem">
+      <button class="btn btn-ghost btn-sm" style="flex:none" onclick="cfAddStudent()">＋登记并选入</button>
+    </div>
+    <div class="m-sub" id="cf-sum" style="margin-top:8px"></div>
+    <label>班级总课时（本班共多少节课）</label>
+    <input id="cf-total-lessons" type="number" inputmode="numeric" placeholder="如 18（该班所有学生自动分配此课时数）" value="${c?c.totalLessons||'':''}">
+    <div class="m-sub">填了班级总课时后，该班所有学生自动继承</div>
+    <label>收入计算方式</label>
+    <div class="seg" id="cf-price-seg">
+      <button data-m="total" class="${priceMode==='total'?'on':''}" onclick="setPriceMode('total')">💰 总价模式</button>
+      <button data-m="per" class="${priceMode==='per'?'on':''}" onclick="setPriceMode('per')">🧑 每人单价</button>
+    </div>
+    <div id="cf-total-box" class="${priceMode==='total'?'':'hidden'}">
+      <label>每节课总价（元）</label>
+      <input id="cf-rate" type="number" inputmode="decimal" placeholder="如 700（整节课一口价）" value="${totalPrice}">
+      <div class="m-sub">按出勤学生人数均分到每人：总价 ÷ 出勤人数 = 每人费用</div>
+    </div>
+    <div id="cf-per-box" class="${priceMode==='per'?'':'hidden'}">
+      <label>每人每节课单价（元）</label>
+      <input id="cf-per-rate" type="number" inputmode="decimal" placeholder="如 140（每个学生每节课的价格）" value="${perPrice}">
+      <div class="m-sub">收入 = 出勤人数 × 每人单价</div>
+    </div>
+    <div class="m-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveCourse()">保存</button>
+    </div>`);
+  updCfSum();
+  renderCfDates();
+}
+/* ===== 排课日期选择器 ===== */
+let cfMode='weekly', cfDates=new Set(), cfCalM=null, cfPriceMode='total';
+function setCfMode(m){
+  cfMode=m;
+  document.querySelectorAll('#cf-seg button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+  document.getElementById('cf-weekly-box').classList.toggle('hidden',m!=='weekly');
+  document.getElementById('cf-dates-box').classList.toggle('hidden',m!=='dates');
+  if(m==='dates')renderCfDates();
+}
+function setPriceMode(m){
+  cfPriceMode=m;
+  document.querySelectorAll('#cf-price-seg button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+  document.getElementById('cf-total-box').classList.toggle('hidden',m!=='total');
+  document.getElementById('cf-per-box').classList.toggle('hidden',m!=='per');
+}
+function renderCfDates(){
+  const box=document.getElementById('cf-dpicker');
+  if(!box)return;
+  const {y,m}=cfCalM;
+  const first=new Date(y,m,1),startWd=(first.getDay()+6)%7,days=new Date(y,m+1,0).getDate();
+  let cells='';
+  for(let i=0;i<startWd;i++)cells+='<div class="dp-cell"></div>';
+  for(let d=1;d<=days;d++){
+    const ds=dstr(y,m,d);
+    const cls=['dp-cell'];
+    if(ds===todayStr())cls.push('dp-today');
+    if(cfDates.has(ds))cls.push('dp-on');
+    cells+=`<div class="${cls.join(' ')}" data-d="${ds}">${d}</div>`;
+  }
+  box.innerHTML=`<div class="dp-cal">
+    <div class="dp-head">
+      <button onclick="shiftCfMonth(-1)">‹</button>
+      <b>${y}年${m+1}月</b>
+      <button onclick="shiftCfMonth(1)">›</button>
+    </div>
+    <div class="dp-wd">${WD.map(w=>`<span>${w}</span>`).join('')}</div>
+    <div class="dp-grid">${cells}</div>
+  </div>`;
+  // 已选 chips
+  const chips=[...cfDates].sort().map(d=>`<button class="stu-chip on" onclick="toggleCfDate('${d}')">${d.slice(5).replace('-','/')} ✕</button>`).join('');
+  document.getElementById('cf-dates-chips').innerHTML=chips||'<span style="font-size:.75rem;color:var(--text2)">还没选日期，点日历上的数字即可</span>';
+}
+function shiftCfMonth(d){cfCalM.m+=d;if(cfCalM.m<0){cfCalM.m=11;cfCalM.y--;}if(cfCalM.m>11){cfCalM.m=0;cfCalM.y++;}renderCfDates();}
+function toggleCfDate(ds){if(cfDates.has(ds))cfDates.delete(ds);else cfDates.add(ds);renderCfDates();}
+function updCfSum(){
+  const on=[...document.querySelectorAll('#cf-stus .stu-chip.on')];
+  const el=document.getElementById('cf-sum');
+  if(!el)return;
+  if(on.length){el.innerHTML=`👥 本班 <b>${on.length} 人</b> · 班级统一价请在上方填写`;}
+  else el.innerHTML='';
+}
+/* 排课时快捷登记新学生：自动进学生管理并选入本班 */
+function cfAddStudent(){
+  const nameEl=document.getElementById('cf-new-name');
+  const name=nameEl.value.trim();
+  if(!name)return toast('请填写新学生姓名');
+  const exist=DB.students.find(s=>s.name===name);
+  let sid;
+  if(exist){sid=exist.id;toast('已有该学生，已直接选入');}
+  else{sid=uid();DB.students.push({id:sid,name});toast(`已登记学生「${name}」✓`);}
+  save();
+  // 刷新 chips（保留已选），并选中新学生
+  const onIds=[...document.querySelectorAll('#cf-stus .stu-chip.on')].map(b=>b.dataset.id);
+  if(!onIds.includes(sid))onIds.push(sid);
+  const avail=availStudents(editingCourse?editingCourse.id:null);
+  document.getElementById('cf-stus').innerHTML=avail.map(s=>{const rem=stuRemaining(s.id);const remTag=rem!==null?`<span style="opacity:.6;font-size:.65rem">剩${rem}</span>`:'';return `<button class="stu-chip ${onIds.includes(s.id)?'on':''}" data-id="${s.id}" data-rate="${s.rate}" onclick="this.classList.toggle('on');updCfSum()">${s.name}${remTag}</button>`;}).join('');
+  nameEl.value='';rateEl.value='';
+  updCfSum();renderMe();
+}
+function saveCourse(){
+  const name=document.getElementById('cf-name').value.trim();
+  if(!name)return toast('请填写课程名称');
+  let wds=[],dates=[];
+  if(cfMode==='weekly'){
+    wds=[...document.querySelectorAll('#cf-wds .stu-chip.on')].map(b=>+b.dataset.wd).sort((a,b)=>a-b);
+    if(!wds.length)return toast('请至少勾选一个星期');
+  }else{
+    dates=[...cfDates].sort();
+    if(!dates.length)return toast('请在日历上点选至少一个日期');
+  }
+  const stus=[...document.querySelectorAll('#cf-stus .stu-chip.on')].map(b=>b.dataset.id);
+  const data={
+    name,mode:cfMode,weekdays:wds,dates,
+    time:document.getElementById('cf-time').value||'10:00',
+    classRate:+document.getElementById('cf-rate').value||0,
+    perStudentRate:+document.getElementById('cf-per-rate').value||0,
+    priceMode:cfPriceMode,
+    totalLessons:+document.getElementById('cf-total-lessons').value||0,
+    studentIds:stus
+  };
+  if(editingCourse){Object.assign(DB.courses.find(c=>c.id===editingCourse.id),data);}
+  else{DB.courses.push({id:uid(),...data});}
+  save();closeModal();renderSchedule();renderLesson();toast('已保存 ✓');
+}
+
+/* ================= OCR 拍照导入 ================= */
+let ocrCands=[];
+function openOcrModal(){
+  ocrCands=[];
+  openModal(`
+    <h3>📷 拍照识别课表</h3>
+    <div class="m-sub">拍摄或选择课表图片，识别后校对确认（印刷体效果最好）</div>
+    <input type="file" id="ocr-file" accept="image/*" capture="environment">
+    <div id="ocr-status"></div>
+    <div id="ocr-cands"></div>
+    <div class="m-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">关闭</button>
+      <button class="btn btn-primary" id="ocr-import-btn" style="display:none" onclick="importOcrCands()">导入选中课程</button>
+    </div>`);
+  document.getElementById('ocr-file').addEventListener('change',runOcr);
+}
+async function runOcr(e){
+  const file=e.target.files[0];if(!file)return;
+  const st=document.getElementById('ocr-status');
+  st.innerHTML=`<div class="ocr-progress">正在识别图片文字…<span id="ocr-pct">0%</span><div class="bar"><i id="ocr-bar" style="width:0%"></i></div></div>`;
+  try{
+    const res=await Tesseract.recognize(file,'chi_sim+eng',{
+      logger:m=>{if(m.status==='recognizing text'){const p=Math.round(m.progress*100);document.getElementById('ocr-pct').textContent=p+'%';document.getElementById('ocr-bar').style.width=p+'%';}}
+    });
+    const text=res.data.text;
+    ocrCands=parseScheduleText(text);
+    st.innerHTML=`<div class="ocr-progress" style="background:var(--green-light);color:#166534">✅ 识别完成，解析出 ${ocrCands.length} 条候选课程，请校对后勾选导入<div class="ocr-result-box">${text.replace(/</g,'&lt;')||'（无文字）'}</div></div>`;
+    renderOcrCands();
+  }catch(err){
+    st.innerHTML=`<div class="ocr-progress" style="background:var(--red-light);color:var(--red)">识别失败：${err.message||err}<br>可换更清晰的图片重试</div>`;
+  }
+}
+function parseScheduleText(text){
+  const wdMap={'一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'日':7,'天':7,'1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7};
+  const lines=text.split(/\n+/).map(l=>l.trim()).filter(l=>l.length>1);
+  const cands=[];
+  let lastWd=null;
+  lines.forEach(line=>{
+    let wd=null;
+    const wm=line.match(/(?:周|星期|礼拜)?([一二三四五六日天])(?![一二三四五六日天])/)||line.match(/(?:周|星期|礼拜)([1-7])/);
+    if(wm)wd=wdMap[wm[1]];
+    if(wd)lastWd=wd;
+    const tm=line.match(/(\d{1,2})\s*[:：\.]\s*(\d{2})/)||line.match(/(\d{1,2})\s*点\s*(\d{1,2})?/);
+    if(!tm)return;
+    const hh=Math.min(23,+tm[1]),mm=tm[2]?Math.min(59,+tm[2]):0;
+    if(hh<6||hh>22)return;
+    const time=pad(hh)+':'+pad(mm);
+    let name=line.replace(/(周|星期|礼拜)[一二三四五六日天1-7]?/g,'').replace(/\d{1,2}\s*[:：\.]\s*\d{2}/g,'').replace(/\d{1,2}\s*点(\d{1,2})?(分|半)?/g,'').replace(/[\s\-—–~～:：,，、|丨]+/g,' ').trim();
+    if(name.length>12)name=name.slice(0,12);
+    if(!name)name='课程';
+    if(wd||lastWd){cands.push({name,weekday:wd||lastWd,time,checked:true});}
+  });
+  const seen=new Set();
+  return cands.filter(c=>{const k=c.weekday+c.time+c.name;if(seen.has(k))return false;seen.add(k);return true;}).slice(0,20);
+}
+function renderOcrCands(){
+  const box=document.getElementById('ocr-cands');
+  if(!ocrCands.length){box.innerHTML=`<div class="empty" style="padding:16px"><p>没解析出课程条目，可换图片重试或手动添加</p></div>`;return;}
+  box.innerHTML=ocrCands.map((c,i)=>`
+    <div class="cand-item ${c.checked?'on':''}" id="cand-${i}">
+      <div class="ci-row">
+        <input type="checkbox" ${c.checked?'checked':''} onchange="ocrCands[${i}].checked=this.checked;document.getElementById('cand-${i}').classList.toggle('on',this.checked)">
+        <input value="${c.name}" onchange="ocrCands[${i}].name=this.value" style="flex:2">
+        <select onchange="ocrCands[${i}].weekday=+this.value">${WD.map((w,wi)=>`<option value="${wi+1}" ${c.weekday===wi+1?'selected':''}>周${w}</option>`).join('')}</select>
+        <input type="time" value="${c.time}" onchange="ocrCands[${i}].time=this.value">
+      </div>
+    </div>`).join('');
+  document.getElementById('ocr-import-btn').style.display='block';
+}
+function importOcrCands(){
+  const sel=ocrCands.filter(c=>c.checked);
+  if(!sel.length)return toast('请先勾选课程');
+  sel.forEach(c=>DB.courses.push({id:uid(),name:c.name,weekdays:[c.weekday],time:c.time,rate:0,studentIds:[]}));
+  save();closeModal();renderSchedule();toast(`已导入 ${sel.length} 门课 ✓`);
+}
+
+/* ================= 记课 ================= */
+function renderLesson(){
+  const t=new Date(selDate);
+  document.getElementById('lesson-cal').innerHTML=calHTML(viewM.y,viewM.m,selDate,true);
+  const wd=(t.getDay()+6)%7+1;
+  document.getElementById('lesson-day-title').innerHTML=`${selDate.slice(5).replace('-','月')}日 周${WD[wd-1]} · 待上课程 <span class="more" onclick="openQuickLesson('${selDate}')">＋ 临时记一节</span>`;
+  const dayCourses=DB.courses.filter(c=>courseOnDate(c,selDate)).sort((a,b)=>a.time.localeCompare(b.time));
+  const doneIds=DB.lessons.filter(l=>l.date===selDate&&l.courseId).map(l=>l.courseId);
+  document.getElementById('day-course-list').innerHTML=dayCourses.length?dayCourses.map(c=>{
+    const done=doneIds.includes(c.id);
+    return `<div class="list-item" onclick="openCheckin('${c.id}','${selDate}')">
+      <div class="icon" style="background:${done?'var(--green-light)':'var(--blue-light)'}">${done?'✅':'🕐'}</div>
+      <div class="body"><div class="title">${c.time} ${c.name}</div><div class="desc">${c.studentIds.map(stuName).join('、')||'未指定学生'} · 满勤 ${fmtMoney(coursePrice(c))}</div></div>
+      <div class="right">${done?'<span class="chip chip-green">已记 · 点我改</span>':'<button class="btn btn-primary btn-sm">去记课</button>'}</div>
+    </div>`;}).join(''):`<div class="empty"><div class="emoji">🍃</div><p>这天课表没有课<br>可点右上角「临时记一节」</p></div>`;
+  const pre=viewM.y+'-'+pad(viewM.m+1);
+  // 学生课时统计
+  const studentsWithPack=DB.students.filter(s=>{
+    const cls=DB.courses.find(c=>c.studentIds.includes(s.id));
+    return cls&&cls.totalLessons>0;
+  });
+  if(studentsWithPack.length){
+    const stats=studentsWithPack.map(s=>{
+      const used=stuUsedLessons(s.id);
+      const cls=DB.courses.find(c=>c.studentIds.includes(s.id));
+      const total=cls.totalLessons;
+      const remaining=total-used;
+      const pct=Math.round(used/total*100);
+      const courseName=cls.name;
+      const cr=cls.classRate||0;
+      const barColor=remaining<=3?'var(--red)':remaining<=total*0.3?'var(--orange)':'var(--blue)';
+      return {s,used,total,remaining,pct,courseName,barColor,cr};
+    }).sort((a,b)=>a.remaining-b.remaining);
+    document.getElementById('stu-lesson-stats').innerHTML=stats.map(st=>`
+      <div class="list-item">
+        <div class="icon" style="background:${st.remaining<=0?'var(--red-light)':st.remaining<=3?'var(--orange-light)':'var(--green-light)'}">${st.remaining<=0?'⚠️':st.remaining<=3?'⏳':'📚'}</div>
+        <div class="body">
+          <div class="title">${st.s.name} <span class="chip ${st.remaining<=0?'chip-red':st.remaining<=3?'chip-orange':'chip-green'}">${st.remaining<=0?'已用完':`剩${st.remaining}节`}</span></div>
+          <div class="desc">${st.courseName} · ${st.used}/${st.total} 节 (${st.pct}%)</div>
+          <div style="height:6px;background:var(--line);border-radius:3px;margin-top:6px;overflow:hidden">
+            <i style="display:block;height:100%;width:${st.pct}%;border-radius:3px;background:${st.barColor}"></i>
+          </div>
+        </div>
+        <div class="right"><div class="amount" style="color:${st.remaining<=0?'var(--red)':'var(--blue-dark)'}">${st.used}/${st.total}</div><div class="desc">${st.cr?fmtMoney(st.cr)+'/节':''}</div></div>
+      </div>`).join('');
+  }else{
+    document.getElementById('stu-lesson-stats').innerHTML=`<div class="empty"><div class="emoji">📊</div><p>暂无课时包数据<br>去课程编辑里设置班级总课时</p></div>`;
+  }
+}
+function delLesson(id){if(!confirm('删除这条上课记录？'))return;DB.lessons=DB.lessons.filter(l=>l.id!==id);save();render();}
+/* ===== 编辑收入记录（记错/点重都能改） ===== */
+function openLessonEdit(id){
+  const l=DB.lessons.find(x=>x.id===id);
+  if(!l)return;
+  openModal(`
+    <h3>✏️ 编辑收入记录</h3>
+    <div class="m-sub">日期、课程、学生、金额都能改，保存后看板自动重算</div>
+    <label>日期</label>
+    <input id="le-date" type="date" value="${l.date}">
+    <label>课程名称</label>
+    <input id="le-title" value="${l.title}">
+    <label>上课学生（勾选自动合计，也可手动改金额）</label>
+    <div class="stu-check" id="le-stus">
+      ${(()=>{const avail=availStudents(null);return DB.students.map(s=>{const rem=stuRemaining(s.id);const remTag=rem!==null?`<span style="opacity:.6;font-size:.65rem">剩${rem}</span>`:'';const blocked=avail.find(a=>a.id===s.id)?'':';opacity:.4;cursor:not-allowed';return `<button class="stu-chip ${l.studentIds.includes(s.id)?'on':''}" data-id="${s.id}" data-rate="${s.rate}" onclick="${avail.find(a=>a.id===s.id)?'this.classList.toggle(\'on\');calcLe()':'toast(\'该学生已在其他班级\')'}" style="${avail.find(a=>a.id===s.id)?'':'opacity:.4;cursor:not-allowed'}">${s.name}<span style="opacity:.6;font-size:.72rem"> ¥${s.rate}</span>${remTag}${avail.find(a=>a.id===s.id)?'':'<span style="font-size:.6rem;color:var(--text2)">(已分班)</span>'}</button>`;}).join('');})()}
+    </div>
+    <div class="m-sub" id="le-sum" style="margin-top:8px"></div>
+    <label>收入金额（元）</label>
+    <input id="le-income" type="number" inputmode="decimal" value="${l.income}">
+    <div class="m-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveLessonEdit('${l.id}')">保存修改</button>
+    </div>`);
+  calcLe();
+}
+function calcLe(){
+  const on=[...document.querySelectorAll('#le-stus .stu-chip.on')];
+  const el=document.getElementById('le-sum');
+  if(el)el.innerHTML=on.length?`已选 <b>${on.length}</b> 人 · 单价合计 <b style="color:var(--blue-dark)">${fmtMoney(on.reduce((s,b)=>s+ +b.dataset.rate,0))}</b>`:'';
+}
+function saveLessonEdit(id){
+  const l=DB.lessons.find(x=>x.id===id);
+  if(!l)return;
+  const ids=[...document.querySelectorAll('#le-stus .stu-chip.on')].map(b=>b.dataset.id);
+  if(!ids.length)return toast('请勾选至少一名学生');
+  l.date=document.getElementById('le-date').value||l.date;
+  l.title=document.getElementById('le-title').value.trim()||l.title;
+  l.studentIds=ids;
+  l.income=+document.getElementById('le-income').value||0;
+  save();closeModal();render();toast('记录已更新 ✓');
+}
+function calHTML(y,m,selected,showSched){
+  const first=new Date(y,m,1),startWd=(first.getDay()+6)%7,days=new Date(y,m+1,0).getDate();
+  const pre=y+'-'+pad(m+1);
+  const lessonDates={};DB.lessons.forEach(l=>{if(l.date.startsWith(pre))lessonDates[l.date]=(lessonDates[l.date]||0)+1;});
+  // 自动计算上班日：有排课（无论是否考勤）即为上班
+  const autoWork=new Set();
+  if(showSched){
+    for(let d=1;d<=days;d++){
+      const ds=dstr(y,m,d);
+      if(DB.courses.some(c=>courseOnDate(c,ds)))autoWork.add(ds);
+    }
+  }
+  let cells='';
+  for(let i=0;i<startWd;i++)cells+='<div class="cal-cell"></div>';
+  for(let d=1;d<=days;d++){
+    const ds=dstr(y,m,d);
+    const sched=autoWork.has(ds);
+    const hasLesson=!!lessonDates[ds];
+    const cls=['cal-cell'];
+    if(ds===todayStr())cls.push('today');
+    // 颜色：已考勤=绿，有排课未考勤=橙，有排课=蓝底（自动上班）
+    if(hasLesson)cls.push('att-done');
+    else if(sched)cls.push('att-pending');
+    if(sched)cls.push('marked-work');
+    if(ds===selected)cls.push('selected');
+    const dotsHtml=hasLesson?'<i></i>'.repeat(Math.min(lessonDates[ds],3)):''+(sched&&!hasLesson?'<i style="background:var(--orange)"></i>':'');
+    cells+=`<div class="${cls.join(' ')}" data-date="${ds}"><span>${d}</span><span class="dots">${dotsHtml}</span></div>`;
+  }
+  return `<div style="display:flex;justify-content:space-between;align-items:center;padding:2px 4px 10px">
+      <button onclick="shiftMonth(-1)" style="font-size:1.1rem;color:var(--blue);padding:4px 10px">‹</button>
+      <b style="font-size:.88rem">${y}年${m+1}月</b>
+      <button onclick="shiftMonth(1)" style="font-size:1.1rem;color:var(--blue);padding:4px 10px">›</button>
+    </div>
+    <div class="cal-head">${WD.map(w=>`<div>${w}</div>`).join('')}</div>
+    <div class="cal-body">${cells}</div>`;
+}
+document.addEventListener('click',e=>{
+  const dp=e.target.closest('.dp-cell[data-d]');
+  if(dp){toggleCfDate(dp.dataset.d);return;}
+  const cell=e.target.closest('.cal-cell[data-date]');
+  if(!cell)return;
+  const d=cell.dataset.date;
+  if(!document.getElementById('page-schedule').classList.contains('hidden')){schedDate=d;renderSchedule();}
+  else if(!document.getElementById('page-lesson').classList.contains('hidden')){selDate=d;renderLesson();}
+  // me 页面的日历不再可手动点击标记，自动根据排课显示
+});
+function toggleDayMark(d){
+  // 已废弃：上班备注改为自动根据排课判断，不再需要手动标记
+}
+
+let checkinCourse=null,checkinDate=null;
+function openCheckin(courseId,date){
+  checkinCourse=DB.courses.find(c=>c.id===courseId);checkinDate=date;
+  if(!checkinCourse)return;
+  if(!DB.students.length){toast('请先在「学生资料」里添加学生');return;}
+  const existLesson=DB.lessons.find(l=>l.date===date&&l.courseId===courseId);
+  const preset=new Set(existLesson?existLesson.studentIds:checkinCourse.studentIds);
+  const inClass=new Set(checkinCourse.studentIds);
+  const classStus=DB.students.filter(s=>inClass.has(s.id));
+  const otherStus=availStudents(checkinCourse.id).filter(s=>!inClass.has(s.id));
+  openModal(`
+    <h3>${existLesson?'✏️ 修改考勤':'✅ 记一节课'} · ${checkinCourse.name}</h3>
+    <div class="m-sub">${date} ${checkinCourse.time} · 本班 ${classStus.length} 人，勾选出勤即算钱</div>
+    <label>出勤学生 <span style="float:right"><a style="color:var(--blue)" onclick="ckAll(true)">全选</a> · <a style="color:var(--text2)" onclick="ckAll(false)">清空</a></span></label>
+    <div class="stu-check" id="ck-stus">
+      ${classStus.map(s=>{const rem=stuRemaining(s.id);const remTag=rem!==null?`<span style="opacity:.6;font-size:.65rem">剩${rem}</span>`:'';return `<button class="stu-chip ${preset.has(s.id)?'on':''}" data-id="${s.id}" data-rate="${s.rate}" onclick="this.classList.toggle('on');calcCk()">${s.name}<span style="opacity:.6;font-size:.72rem"> ¥${s.rate}</span>${remTag}</button>`;}).join('')}
+      ${otherStus.map(s=>{const rem=stuRemaining(s.id);const remTag=rem!==null?`<span style="opacity:.6;font-size:.65rem">剩${rem}</span>`:'';return `<button class="stu-chip ${preset.has(s.id)?'on':''}" data-id="${s.id}" data-rate="${s.rate}" onclick="this.classList.toggle('on');calcCk()">${s.name}<span style="opacity:.6;font-size:.72rem"> ¥${s.rate}</span>${remTag}</button>`;}).join('')}
+    </div>
+    <div class="m-sub" id="ck-sum" style="margin-top:8px"></div>
+    <label>本节课收入（可手动改）</label>
+    <input id="ck-income" type="number" inputmode="decimal" value="${existLesson?existLesson.income:(coursePrice(checkinCourse)||'')}">
+    <div class="m-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveCheckin()">确认上课 ＋收入</button>
+    </div>`);
+  calcCk();
+}
+function ckAll(on){
+  document.querySelectorAll('#ck-stus .stu-chip').forEach(b=>b.classList.toggle('on',on));
+  calcCk();
+}
+function calcCk(){
+  const on=[...document.querySelectorAll('#ck-stus .stu-chip.on')];
+  const sum=on.reduce((s,b)=>s+ +b.dataset.rate,0);
+  if(on.length){document.getElementById('ck-income').value=sum;}
+  const el=document.getElementById('ck-sum');
+  if(el)el.innerHTML=on.length?`👥 出勤 <b>${on.length} 人</b> × 单价合计 = <b style="color:var(--blue-dark)">${fmtMoney(sum)}</b>`:'';
+}
+function saveCheckin(){
+  const ids=[...document.querySelectorAll('#ck-stus .stu-chip.on')].map(b=>b.dataset.id);
+  if(!ids.length)return toast('请勾选至少一名学生');
+  const income=+document.getElementById('ck-income').value||0;
+  const exist=DB.lessons.find(l=>l.date===checkinDate&&l.courseId===checkinCourse.id);
+  if(exist){exist.studentIds=ids;exist.income=income;save();closeModal();render();toast(`考勤已更新，收入 ${fmtMoney(income)} ✓`);}
+  else{DB.lessons.push({id:uid(),date:checkinDate,courseId:checkinCourse.id,title:checkinCourse.name,studentIds:ids,income});save();closeModal();render();toast(`已记课，收入 +${fmtMoney(income)} 🎉`);}
+}
+function openQuickLesson(date){
+  if(!DB.students.length){toast('请先在「学生资料」里添加学生');return;}
+  checkinCourse=null;checkinDate=date;
+  openModal(`
+    <h3>＋ 临时记一节课</h3>
+    <div class="m-sub">${date} · 不在课表内的加课/试课</div>
+    <label>课程名称</label>
+    <input id="ql-name" placeholder="如：试听课 / 临时加课" value="临时课">
+    <label>上课学生（可多选，临时课不限制班级）</label>
+    <div class="stu-check" id="ck-stus">
+      ${DB.students.map(s=>{const rem=stuRemaining(s.id);const remTag=rem!==null?`<span style="opacity:.6;font-size:.65rem">剩${rem}</span>`:'';return `<button class="stu-chip" data-id="${s.id}" data-rate="${s.rate}" onclick="this.classList.toggle('on');calcCk()">${s.name}<span style="opacity:.6;font-size:.72rem"> ¥${s.rate}</span>${remTag}</button>`;}).join('')}
+    </div>
+    <label>本节课收入</label>
+    <input id="ck-income" type="number" inputmode="decimal" placeholder="勾选学生后自动求和">
+    <div class="m-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveQuick()">确认 ＋收入</button>
+    </div>`);
+}
+function saveQuick(){
+  const ids=[...document.querySelectorAll('#ck-stus .stu-chip.on')].map(b=>b.dataset.id);
+  if(!ids.length)return toast('请勾选至少一名学生');
+  const income=+document.getElementById('ck-income').value||0;
+  const name=document.getElementById('ql-name').value.trim()||'临时课';
+  const dup=DB.lessons.find(l=>l.date===checkinDate&&l.title===name);
+  if(dup&&!confirm(`这天已有一笔「${name}」（${fmtMoney(dup.income)}），确定要再记一笔吗？\n点"取消"后可到记录列表里点"编辑"修改原记录。`))return;
+  DB.lessons.push({id:uid(),date:checkinDate,courseId:null,title:name,studentIds:ids,income});
+  save();closeModal();render();toast(`已记课，收入 +${fmtMoney(income)} 🎉`);
+}
+
+/* ================= 支出 ================= */
+let expCat='油费';
+function renderExpense(){
+  const {y,m}=viewM;
+  document.getElementById('exp-month').textContent=y+'年'+(m+1)+'月';
+  const s=monthStats(y,m);
+  const byCat={};s.expenses.forEach(e=>byCat[e.category]=(byCat[e.category]||0)+e.amount);
+  document.getElementById('exp-stat').innerHTML=`
+    <div class="mini-card"><div class="mc-label">本月总支出</div><div class="mc-value" style="color:var(--red)">${fmtMoney(s.expense)}</div></div>
+    <div class="mini-card"><div class="mc-label">本月净收入</div><div class="mc-value" style="color:var(--blue-dark)">${fmtMoney(s.net)}</div></div>
+    ${CATS.filter(c=>byCat[c.k]).map(c=>`<div class="mini-card"><div class="mc-label">${c.e} ${c.k}</div><div class="mc-value" style="font-size:1rem;color:var(--red)">${fmtMoney(byCat[c.k])}</div></div>`).join('')}`;
+  const ls=[...s.expenses].sort((a,b)=>b.date.localeCompare(a.date));
+  document.getElementById('expense-list').innerHTML=ls.length?ls.map(e=>{
+    const cat=CATS.find(c=>c.k===e.category)||CATS[5];
+    return `<div class="list-item">
+      <div class="icon" style="background:var(--red-light)">${cat.e}</div>
+      <div class="body"><div class="title">${e.category}</div><div class="desc">${e.date.slice(5)} ${e.note||''}</div></div>
+      <div class="right"><div class="amount out">-${fmtMoney(e.amount)}</div><button style="font-size:.66rem;color:var(--text2);margin-top:2px" onclick="delExpense('${e.id}')">删除</button></div>
+    </div>`;}).join(''):`<div class="empty"><div class="emoji">💸</div><p>本月没有支出记录<br>点右下角 ＋ 记一笔</p></div>`;
+}
+function delExpense(id){if(!confirm('删除这笔支出？'))return;DB.expenses=DB.expenses.filter(e=>e.id!==id);save();render();}
+function openExpenseModal(){
+  expCat='油费';
+  openModal(`
+    <h3>💸 记一笔支出</h3>
+    <label>金额（元）</label>
+    <input id="ef-amt" type="number" inputmode="decimal" placeholder="0.00" autofocus>
+    <label>分类</label>
+    <div class="cat-grid">${CATS.map(c=>`<button class="cat-item ${c.k==='油费'?'on':''}" data-k="${c.k}" onclick="expCat=this.dataset.k;document.querySelectorAll('.cat-item').forEach(x=>x.classList.toggle('on',x===this))"><span class="ce">${c.e}</span>${c.k}</button>`).join('')}</div>
+    <label>日期</label>
+    <input id="ef-date" type="date" value="${todayStr()}">
+    <label>备注（可选）</label>
+    <input id="ef-note" placeholder="如：去校区油费">
+    <div class="m-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" style="background:linear-gradient(135deg,#ef4444,#f97316)" onclick="saveExpense()">保存支出</button>
+    </div>`);
+}
+function saveExpense(){
+  const amt=+document.getElementById('ef-amt').value;
+  if(!amt||amt<=0)return toast('请填写金额');
+  DB.expenses.push({id:uid(),date:document.getElementById('ef-date').value||todayStr(),category:expCat,amount:amt,note:document.getElementById('ef-note').value.trim()});
+  save();closeModal();render();toast('支出已保存 ✓');
+}
+
+/* ================= 我的 ================= */
+function renderMe(){
+  // 按班级分组折叠展示
+  const classGroups=[];
+  const assignedIds=new Set();
+  DB.courses.forEach(c=>{
+    classGroups.push({course:c,students:[]});
+    c.studentIds.forEach(sid=>assignedIds.add(sid));
+  });
+  // 分配学生到课程
+  DB.students.forEach(s=>{
+    const myCourse=DB.courses.find(c=>c.studentIds.includes(s.id));
+    if(myCourse){
+      const grp=classGroups.find(g=>g.course.id===myCourse.id);
+      if(grp)grp.students.push(s);
+    }
+  });
+  const unassigned=DB.students.filter(s=>!assignedIds.has(s.id));
+
+  let html='';
+  classGroups.forEach(g=>{
+    const c=g.course;
+    const finishedLessons=DB.lessons.reduce((n,l)=>n+(l.courseId===c.id?1:0),0);
+    const totalIncome=DB.lessons.filter(l=>l.courseId===c.id).reduce((s,l)=>s+l.income,0);
+    const totalLabel=c.totalLessons?`${finishedLessons}/${c.totalLessons}节`:finishedLessons+'节';
+    html+=`<div class="class-group">
+      <div class="class-group-header" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+        <span class="arrow">▶</span>
+        <span style="font-size:1.1rem">📖</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.88rem;font-weight:600">${c.name}</div>
+          <div class="class-summary">${c.time} · ${g.students.length}名学生 · ${totalLabel} · 收入 ${fmtMoney(totalIncome)}</div>
+        </div>
+        <span class="class-badge">${g.students.length}人</span>
+      </div>
+      <div class="class-group-body">
+        ${g.students.length?g.students.map(s=>renderStudentRow(s)).join(''):`<div class="list-item" style="justify-content:center;padding:12px 16px"><span style="font-size:.75rem;color:var(--text2)">暂无学生，<button style="color:var(--blue);font-size:.75rem" onclick="openCourseModal(DB.courses.find(x=>x.id==='${c.id}'))">去添加</button></span></div>`}
+      </div>
+    </div>`;
+  });
+
+  // 未分配班级
+  if(unassigned.length){
+    html+=`<div class="class-group">
+      <div class="class-group-header" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+        <span class="arrow">▶</span>
+        <span style="font-size:1.1rem">📋</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:.88rem;font-weight:600">未分配班级</div>
+          <div class="class-summary">${unassigned.length}名学生等待分配到课程</div>
+        </div>
+        <span class="class-badge" style="background:var(--orange-light);color:#92400e">${unassigned.length}人</span>
+      </div>
+      <div class="class-group-body">
+        ${unassigned.map(s=>renderStudentRow(s)).join('')}
+      </div>
+    </div>`;
+  }
+
+  if(!classGroups.length&&!unassigned.length){
+    html=`<div class="empty"><div class="emoji">🧑‍🎓</div><p>还没有学生<br>先去「课程管理」创建课程并添加学生</p></div>`;
+  }
+  document.getElementById('student-list').innerHTML=html;
+  renderWorkCal();
+}
+/* 渲染单个学生行 */
+function renderStudentRow(s){
+  const total=DB.lessons.reduce((n,l)=>n+(l.studentIds.includes(s.id)?1:0),0);
+  const rem=stuRemaining(s.id);
+  const cls=DB.courses.find(c=>c.studentIds.includes(s.id));
+  const clsTotal=cls?cls.totalLessons:0;
+  const remLine=rem!==null?` · 课时包剩余 <b style="color:${rem<=3?'var(--red)':'var(--blue-dark)'}">${rem}</b>/${clsTotal} 节`:'';
+  return `<div class="list-item">
+    <div class="icon" style="background:var(--orange-light)">🧑‍🎓</div>
+    <div class="body"><div class="title">${s.name}${rem!==null&&rem<=3?` <span class="chip chip-red">仅剩${rem}节</span>`:''}</div><div class="desc">累计上过 ${total} 节${remLine}</div></div>
+    <div class="right">
+      <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();openStudentModal('${s.id}')">编辑</button>
+      <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();delStudent('${s.id}')">删</button>
+    </div>
+  </div>`;
+}
+function renderWorkCal(){
+  // 上班备注日历：自动根据排课显示（蓝底=有课=上班），不可手动修改
+  document.getElementById('work-cal').innerHTML=calHTML(workCalM.y,workCalM.m,'',true).replace(/shiftMonth\(/g,'shiftWorkMonth(');
+}
+let editingStu=null;
+function openStudentModal(id){
+  editingStu=id?DB.students.find(s=>s.id===id):null;
+  openModal(`
+    <h3>${editingStu?'编辑':'添加'}学生</h3>
+    <label>学生姓名</label>
+    <input id="sf-name" placeholder="如：小明" value="${editingStu?editingStu.name:''}">
+    <div class="m-sub">课时由所在班级统一分配，无需单独设置</div>
+    <div class="m-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveStudent()">保存</button>
+    </div>`);
+}
+function saveStudent(){
+  const name=document.getElementById('sf-name').value.trim();
+  if(!name)return toast('请填写姓名');
+  if(editingStu){editingStu.name=name;}
+  else DB.students.push({id:uid(),name});
+  save();closeModal();render();toast('已保存 ✓');
+}
+function delStudent(id){
+  const s=DB.students.find(x=>x.id===id);
+  if(!confirm(`删除学生「${s.name}」？历史记录会保留但显示为"已删学生"。`))return;
+  DB.students=DB.students.filter(x=>x.id!==id);
+  DB.courses.forEach(c=>c.studentIds=c.studentIds.filter(x=>x!==id));
+  save();render();
+}
+
+/* ================= 数据备份 ================= */
+function exportData(){
+  const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=(DB.settings.orgName||'晓彤的书屋')+'_备份_'+todayStr()+'.json';a.click();toast('已导出 ✓');
+}
+function exportForBaidu(){
+  // 导出一个带日期的 JSON 文件，方便上传百度云盘
+  const ts=new Date().toISOString().slice(0,10);
+  const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='晓彤的书屋_备份_'+ts+'.json';a.click();
+  toast('📁 文件已下载！\n打开百度云盘App → 上传文件 → 选择刚下载的 JSON 文件');
+}
+function importData(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{
+    const d=JSON.parse(r.result);
+    if(!d.students||!d.lessons)throw new Error('格式不对');
+    DB=normalize(d);
+    save();render();toast('导入成功 ✓');
+  }catch(err){toast('导入失败：文件格式不对');}};
+  r.readAsText(f);e.target.value='';
+}
+function clearData(){
+  if(!confirm('确定清空全部数据？此操作不可恢复！'))return;
+  if(!confirm('再确认一次：学生、课程、收支记录都会被删除'))return;
+  localStorage.removeItem(KEY);
+  DB=blankDB();
+  save();render();toast('已清空');
+}
+
+/* ================= 弹窗 ================= */
+function openModal(html){document.getElementById('modal-root').innerHTML=`<div class="modal-mask" onclick="if(event.target===this)closeModal()"><div class="modal">${html}</div></div>`;}
+function closeModal(){document.getElementById('modal-root').innerHTML='';}
+
+/* ================= 云端同步（时间戳冲突解决） ================= */
+function genKey(){return [...crypto.getRandomValues(new Uint8Array(8))].map(b=>b.toString(16).padStart(2,'0')).join('');}
+function syncKeySet(){return !!META.syncKey;}
+function updateSyncBadge(){
+  const el=document.getElementById('sync-badge');
+  if(!el)return;
+  if(!syncKeySet()){el.innerHTML='☁️ 未开启云同步';el.style.color='var(--text2)';}
+  else{
+    const t=META.lastSync?new Date(META.lastSync).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):'从未';
+    el.innerHTML=`☁️ 已开启 · 上次同步 ${t}${META.dirty?' · <b style="color:var(--orange)">有未同步改动</b>':''}`;
+    el.style.color='var(--text2)';
+  }
+  // 更新 header 同步按钮状态点
+  const dot=document.getElementById('header-sync-dot');
+  const btn=document.getElementById('header-sync-btn');
+  if(dot&&btn){
+    if(!syncKeySet()){dot.className='sync-dot';btn.title='云同步（未开启）';}
+    else if(META.dirty){dot.className='sync-dot dirty';btn.title='云同步（有未同步改动）';}
+    else{dot.className='sync-dot clean';btn.title='云同步（已同步）';}
+  }
+}
+/* 开启同步：生成或输入同步钥匙 */
+function openSyncSetup(){
+  openModal(`
+    <h3>☁️ 云端同步</h3>
+    <div class="m-sub">多台设备（手机/电脑）共用一份数据。同步用「时间戳」解决冲突：哪边最后改动，就保留哪边。</div>
+    <label>同步钥匙（第一台设备留空自动生成；其他设备输入同一把钥匙即可加入）</label>
+    <input id="sy-key" placeholder="留空 = 创建新同步空间" value="${META.syncKey||''}" autocapitalize="off" autocorrect="off">
+    <div class="m-sub" style="margin-top:8px">🔑 钥匙就是同步空间的"账号"，请抄下来保存好，换设备时输入它即可取回数据。</div>
+    <div class="m-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="setupSync()">开启并立即同步</button>
+    </div>`);
+}
+async function setupSync(){
+  let k=document.getElementById('sy-key').value.trim();
+  if(k&&!/^[A-Za-z0-9_-]{4,64}$/.test(k))return toast('钥匙格式不对（4-64位字母数字）');
+  if(!k)k=genKey();
+  META.syncKey=k;
+  await idbSet('meta',META);
+  closeModal();
+  await doSync(true);
+}
+/* 一键同步：推拉合并，时间戳 last-write-wins */
+let syncing=false;
+async function doSync(silent){
+  if(!syncKeySet()){openSyncSetup();return;}
+  if(syncing)return toast('正在同步中…');
+  syncing=true;
+  const btns=document.querySelectorAll('.sync-btn, #sync-btn');
+  btns.forEach(b=>b.textContent='⏳');
+  try{
+    // 1. 拉云端
+    const r=await fetch('api/sync?key='+encodeURIComponent(META.syncKey));
+    const remote=await r.json();
+    const localTs=META.updatedAt||0;
+    const remoteTs=remote.updatedAt||0;
+    if(remote.found&&remoteTs>localTs){
+      // 云端更新 → 采用云端
+      DB=normalize(remote.data);
+      META.updatedAt=remoteTs;
+      await idbSet('data',DB);
+      toast('已从云端拉取最新数据 ✓');
+    }else{
+      // 本地更新或相等 → 推送到云端
+      const pr=await fetch('api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:META.syncKey,updatedAt:localTs,data:DB})});
+      const pres=await pr.json();
+      if(pres.status==='conflict'){
+        // 推送瞬间云端又变了 → 采用云端
+        DB=normalize(pres.data);
+        META.updatedAt=pres.updatedAt;
+        await idbSet('data',DB);
+        toast('云端较新，已拉取覆盖 ✓');
+      }else{
+        toast(silent?'已开启同步并上传 ✓':'已同步到云端 ✓');
+      }
+    }
+    META.lastSync=Date.now();
+    META.dirty=false;
+    await idbSet('meta',META);
+    render();
+  }catch(e){
+    toast('同步失败：网络不可用，稍后再试');
+  }finally{
+    syncing=false;
+    const btns2=document.querySelectorAll('.sync-btn, #sync-btn');
+    btns2.forEach(b=>{if(b.id==='header-sync-btn')b.innerHTML='☁️<span class="sync-dot" id="header-sync-dot"></span>';else b.textContent='☁️ 同步';});
+    updateSyncBadge();
+  }
+}
+/* 复制钥匙 */
+function copySyncKey(){
+  if(!META.syncKey)return toast('还没开启同步');
+  navigator.clipboard.writeText(META.syncKey).then(()=>toast('钥匙已复制 ✓')).catch(()=>{prompt('长按复制钥匙：',META.syncKey);});
+}
+/* 关闭同步（保留本地数据） */
+async function disableSync(){
+  if(!confirm('关闭云同步？本地数据保留，云端数据不删除。'))return;
+  META.syncKey='';META.lastSync=0;META.dirty=false;
+  await idbSet('meta',META);
+  render();toast('已关闭云同步');
+}
+
+/* ================= PWA：自动同步更新 ================= */
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').then(reg=>{
+    // 每次打开页面主动检查新版本
+    reg.update().catch(()=>{});
+    // 发现新版 SW 安装完成 → 提示刷新应用
+    reg.addEventListener('updatefound',()=>{
+      const nw=reg.installing;
+      if(!nw)return;
+      nw.addEventListener('statechange',()=>{
+        if(nw.state==='installed'&&navigator.serviceWorker.controller){
+          toast('已获取新版本，正在更新…');
+          setTimeout(()=>location.reload(),900);
+        }
+      });
+    });
+  }).catch(()=>{});
+  // 新 SW 接管 → 刷新页面加载新资源
+  let refreshing=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{
+    if(refreshing)return;refreshing=true;location.reload();
+  });
+}
+initDB();
+</script>
+</body>
+</html>
