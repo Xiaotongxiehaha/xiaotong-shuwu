@@ -1358,6 +1358,8 @@ function closeModal(){document.getElementById('modal-root').innerHTML='';}
 /* ================= 云端同步（时间戳冲突解决） ================= */
 function genKey(){return [...crypto.getRandomValues(new Uint8Array(8))].map(b=>b.toString(16).padStart(2,'0')).join('');}
 function syncKeySet(){return !!getGitHubToken();}
+/* 预置 Gist ID，首次同步自动拉取已有数据 */
+const PRESET_GIST='f838902646a7cedafc8974cd8b98d1ef';
 function updateSyncBadge(){
   const el=document.getElementById('sync-badge');
   if(!el)return;
@@ -1396,7 +1398,8 @@ async function setupSync(){
   if(!t)return toast('请填写 GitHub Token');
   if(!t.startsWith('ghp_'))return toast('Token 格式不对，应以 ghp_ 开头');
   setGitHubToken(t);
-  META.syncKey='gist'; // 标记已设置
+  META.syncKey='gist';
+  META.gistId=PRESET_GIST; // 使用预置数据 Gist
   await idbSet('meta',META);
   closeModal();
   await doSync(true);
@@ -1413,7 +1416,7 @@ async function doSync(silent){
   const btns=document.querySelectorAll('.sync-btn, #sync-btn');
   btns.forEach(b=>b.textContent='⏳');
   try{
-    const gistId=META.gistId;
+    const gistId=META.gistId||PRESET_GIST;
     const localTs=META.updatedAt||0;
     const localData={updatedAt:localTs,data:DB};
     // 1. 拉云端 Gist
