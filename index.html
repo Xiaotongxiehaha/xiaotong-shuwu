@@ -437,8 +437,12 @@ async function initDB(){
 
 /* ---- 保存：写 IndexedDB + 更新时间戳 + 标记待同步 ---- */
 function save(){
-  META.updatedAt=Date.now();
-  META.dirty=true;
+  // 只有非空数据才更新时间戳（防止空数据覆盖云端）
+  const hasContent=DB.students.length||DB.courses.length||DB.lessons.length;
+  if(hasContent){
+    META.updatedAt=Date.now();
+    META.dirty=true;
+  }
   idbSet('data',DB).catch(e=>console.warn(e));
   idbSet('meta',META).catch(e=>console.warn(e));
   updateSyncBadge();
@@ -1418,7 +1422,7 @@ async function doSync(silent){
   try{
     const gistId=META.gistId||PRESET_GIST;
     const localTs=META.updatedAt||0;
-    const localData={updatedAt:localTs,data:DB};
+    const isEmptyLocal=!DB.students.length&&!DB.courses.length&&!DB.lessons.length;
     // 1. 拉云端 Gist
     let remoteTs=0,remoteData=null;
     if(gistId){
@@ -1431,8 +1435,8 @@ async function doSync(silent){
         if(f&&f.content){try{const d=JSON.parse(f.content);remoteTs=d.updatedAt||0;remoteData=d.data;}catch(e){}}
       }
     }
-    // 2. 时间戳冲突解决
-    if(remoteData&&remoteTs>localTs){
+    // 2. 时间戳冲突解决：云端有新数据 OR 本地是空的 → 拉取云端
+    if(remoteData&&(remoteTs>localTs||isEmptyLocal)){
       // 云端更新 → 拉取
       DB=normalize(remoteData);
       META.updatedAt=remoteTs;
