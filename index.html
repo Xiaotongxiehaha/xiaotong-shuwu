@@ -225,7 +225,7 @@ label{font-size:.82rem;color:var(--text2);display:block;margin:10px 0 5px}
     <img class="drawer-logo" src="icon-192.png" alt="logo">
     <div>
       <div class="dn" id="drawer-name">晓彤的书屋</div>
-      <div class="dv">管理后台 <span id="ver-tag">v1.13.3</span></div>
+      <div class="dv">管理后台 <span id="ver-tag">v2.0.0</span></div>
     </div>
   </div>
   <div class="drawer-menu" id="drawer-menu">
@@ -345,8 +345,7 @@ label{font-size:.82rem;color:var(--text2);display:block;margin:10px 0 5px}
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-primary btn-sm" onclick="doSync()">立即同步</button>
-          <button class="btn btn-ghost btn-sm" onclick="openSyncSetup()">设置钥匙</button>
-          <button class="btn btn-ghost btn-sm" onclick="copySyncKey()">复制钥匙</button>
+          <button class="btn btn-ghost btn-sm" onclick="openSyncSetup()">设置 Token</button>
           <button class="btn btn-danger btn-sm" onclick="disableSync()">关闭</button>
         </div>
       </div>
@@ -366,7 +365,7 @@ label{font-size:.82rem;color:var(--text2);display:block;margin:10px 0 5px}
 /* ================= 数据层（IndexedDB + 云端同步） ================= */
 const KEY='kgj_data_v1';           // 旧 localStorage 键（迁移用）
 const IDB_NAME='kgj_db', IDB_STORE='kv';
-const APP_VER='v1.13.3';
+const APP_VER='v2.0.0';
 const CATS=[{k:'油费',e:'⛽'},{k:'停车费',e:'🅿️'},{k:'过路费',e:'🛣️'},{k:'餐费',e:'🍜'},{k:'教具',e:'📚'},{k:'其他',e:'📦'}];
 const WD=['一','二','三','四','五','六','日'];
 const DEFAULT_ORG='晓彤的书屋';
@@ -1358,7 +1357,7 @@ function closeModal(){document.getElementById('modal-root').innerHTML='';}
 
 /* ================= 云端同步（时间戳冲突解决） ================= */
 function genKey(){return [...crypto.getRandomValues(new Uint8Array(8))].map(b=>b.toString(16).padStart(2,'0')).join('');}
-function syncKeySet(){return !!META.syncKey;}
+function syncKeySet(){return !!getGitHubToken();}
 function updateSyncBadge(){
   const el=document.getElementById('sync-badge');
   if(!el)return;
@@ -1380,71 +1379,107 @@ function updateSyncBadge(){
 /* 开启同步：生成或输入同步钥匙 */
 function openSyncSetup(){
   openModal(`
-    <h3>☁️ 云端同步</h3>
-    <div class="m-sub">多台设备（手机/电脑）共用一份数据。同步用「时间戳」解决冲突：哪边最后改动，就保留哪边。</div>
-    <label>同步钥匙（第一台设备留空自动生成；其他设备输入同一把钥匙即可加入）</label>
-    <input id="sy-key" placeholder="留空 = 创建新同步空间" value="${META.syncKey||''}" autocapitalize="off" autocorrect="off">
-    <div class="m-sub" style="margin-top:8px">🔑 钥匙就是同步空间的"账号"，请抄下来保存好，换设备时输入它即可取回数据。</div>
+    <h3>☁️ 云同步（GitHub Gist）</h3>
+    <div class="m-sub">数据存到你的 GitHub Gist，多设备同步，不需要额外服务器</div>
+    <label>GitHub Personal Access Token</label>
+    <input id="sy-key" placeholder="ghp_xxxxxxxxxx" value="${getGitHubToken()}" autocapitalize="off" autocorrect="off">
+    <div class="m-sub" style="margin-top:8px">🔑 去 <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens/new</a> 创建，勾选 <b>gist</b> 权限，有效期选 No expiration。Token 仅存你本地，不上传。</div>
     <div class="m-actions">
       <button class="btn btn-ghost" onclick="closeModal()">取消</button>
-      <button class="btn btn-primary" onclick="setupSync()">开启并立即同步</button>
-    </div>`);
+      <button class="btn btn-primary" onclick="setupSync()">保存并同步</button>
+    </div>
+    ${syncKeySet()?`<div style="margin-top:12px;padding:10px;background:var(--red-light);border-radius:10px;font-size:.78rem">⚠️ <button style="color:var(--red);font-weight:600" onclick="disableSync()">关闭云同步</button></div>`:''}
+  `);
 }
 async function setupSync(){
-  let k=document.getElementById('sy-key').value.trim();
-  if(k&&!/^[A-Za-z0-9_-]{4,64}$/.test(k))return toast('钥匙格式不对（4-64位字母数字）');
-  if(!k)k=genKey();
-  META.syncKey=k;
+  const t=document.getElementById('sy-key').value.trim();
+  if(!t)return toast('请填写 GitHub Token');
+  if(!t.startsWith('ghp_'))return toast('Token 格式不对，应以 ghp_ 开头');
+  setGitHubToken(t);
+  META.syncKey='gist'; // 标记已设置
   await idbSet('meta',META);
   closeModal();
   await doSync(true);
 }
 /* 一键同步：推拉合并，时间戳 last-write-wins */
 let syncing=false;
+/* 云同步使用 GitHub Gist（无需后端服务器） */
 async function doSync(silent){
   if(!syncKeySet()){openSyncSetup();return;}
   if(syncing)return toast('正在同步中…');
+  const token=getGitHubToken();
+  if(!token){toast('请先在设置里填写 GitHub Token');openSyncSetup();return;}
   syncing=true;
   const btns=document.querySelectorAll('.sync-btn, #sync-btn');
   btns.forEach(b=>b.textContent='⏳');
   try{
-    // 1. 拉云端
-    const r=await fetch('api/sync?key='+encodeURIComponent(META.syncKey));
-    const remote=await r.json();
+    const gistId=META.gistId;
     const localTs=META.updatedAt||0;
-    const remoteTs=remote.updatedAt||0;
-    if(remote.found&&remoteTs>localTs){
-      // 云端更新 → 采用云端
-      DB=normalize(remote.data);
+    const localData={updatedAt:localTs,data:DB};
+    // 1. 拉云端 Gist
+    let remoteTs=0,remoteData=null;
+    if(gistId){
+      const r=await fetch('https://api.github.com/gists/'+gistId,{
+        headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github.v3+json'}
+      });
+      if(r.ok){
+        const g=await r.json();
+        const f=g.files&&g.files['xiaotong-data.json'];
+        if(f&&f.content){try{const d=JSON.parse(f.content);remoteTs=d.updatedAt||0;remoteData=d.data;}catch(e){}}
+      }
+    }
+    // 2. 时间戳冲突解决
+    if(remoteData&&remoteTs>localTs){
+      // 云端更新 → 拉取
+      DB=normalize(remoteData);
       META.updatedAt=remoteTs;
       await idbSet('data',DB);
       toast('已从云端拉取最新数据 ✓');
     }else{
-      // 本地更新或相等 → 推送到云端
-      const pr=await fetch('api/sync',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:META.syncKey,updatedAt:localTs,data:DB})});
-      const pres=await pr.json();
-      if(pres.status==='conflict'){
-        // 推送瞬间云端又变了 → 采用云端
-        DB=normalize(pres.data);
-        META.updatedAt=pres.updatedAt;
-        await idbSet('data',DB);
-        toast('云端较新，已拉取覆盖 ✓');
+      // 本地更新 → 推送到 Gist
+      const now=Date.now();
+      META.updatedAt=now;
+      const body={
+        description:'晓彤的书屋 · 云同步数据',
+        public:false,
+        files:{'xiaotong-data.json':{content:JSON.stringify({updatedAt:now,data:DB})}}
+      };
+      let res;
+      if(gistId){
+        res=await fetch('https://api.github.com/gists/'+gistId,{
+          method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)
+        });
       }else{
-        toast(silent?'已开启同步并上传 ✓':'已同步到云端 ✓');
+        res=await fetch('https://api.github.com/gists',{
+          method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)
+        });
       }
+      if(res.ok){
+        const g=await res.json();
+        META.gistId=g.id;
+        toast(silent?'已开启同步并上传 ✓':'已同步到云端 ✓');
+      }else{throw new Error('Gist API 错误');}
     }
     META.lastSync=Date.now();
     META.dirty=false;
     await idbSet('meta',META);
     render();
   }catch(e){
-    toast('同步失败：网络不可用，稍后再试');
+    toast('同步失败：'+e.message);
   }finally{
     syncing=false;
     const btns2=document.querySelectorAll('.sync-btn, #sync-btn');
     btns2.forEach(b=>{if(b.id==='header-sync-btn')b.innerHTML='☁️<span class="sync-dot" id="header-sync-dot"></span>';else b.textContent='☁️ 同步';});
     updateSyncBadge();
   }
+}
+/* 获取 GitHub Token */
+function getGitHubToken(){
+  return META.githubToken||localStorage.getItem('kgj_gh_token')||'';
+}
+function setGitHubToken(t){
+  META.githubToken=t;
+  localStorage.setItem('kgj_gh_token',t);
 }
 /* 复制钥匙 */
 function copySyncKey(){
@@ -1453,8 +1488,9 @@ function copySyncKey(){
 }
 /* 关闭同步（保留本地数据） */
 async function disableSync(){
-  if(!confirm('关闭云同步？本地数据保留，云端数据不删除。'))return;
-  META.syncKey='';META.lastSync=0;META.dirty=false;
+  if(!confirm('关闭云同步？本地数据保留，云端 Gist 数据不删除。'))return;
+  META.syncKey='';META.githubToken='';META.gistId='';META.lastSync=0;META.dirty=false;
+  localStorage.removeItem('kgj_gh_token');
   await idbSet('meta',META);
   render();toast('已关闭云同步');
 }
