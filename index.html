@@ -152,6 +152,26 @@ label{font-size:.82rem;color:var(--text2);display:block;margin:10px 0 5px}
 .fab{position:fixed;right:18px;bottom:calc(26px + env(safe-area-inset-bottom));width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;font-size:1.55rem;box-shadow:0 6px 18px rgba(59,130,246,.4);z-index:40;display:flex;align-items:center;justify-content:center}
 @media(min-width:960px){.fab{right:calc(50% - 460px)}}
 
+/* ===== 课后反馈 ===== */
+.fb-form{background:var(--card);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.fb-form h4{font-size:.88rem;font-weight:600;margin-bottom:10px;color:var(--text)}
+.fb-form label{margin-top:12px}
+.fb-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.fb-tag{padding:5px 12px;border-radius:16px;border:1.5px solid var(--line);font-size:.76rem;background:#fff;color:var(--text2);font-weight:500}
+.fb-tag.on{border-color:var(--blue);background:var(--blue-light);color:var(--blue-dark);font-weight:600}
+.fb-tag.on.good{border-color:var(--green);background:var(--green-light);color:var(--green-dark)}
+.fb-tag.on.warn{border-color:var(--orange);background:var(--orange-light);color:#92400e}
+.fb-preview{background:var(--bg);border-radius:12px;padding:16px;margin-top:14px;white-space:pre-wrap;font-size:.84rem;line-height:1.7;color:var(--text)}
+.fb-preview .fb-p-title{font-weight:700;font-size:.9rem;margin-bottom:6px}
+.fb-card{background:var(--card);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px;box-shadow:var(--shadow)}
+.fb-card .fb-card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.fb-card .fb-card-title{font-size:.86rem;font-weight:600}
+.fb-card .fb-card-date{font-size:.7rem;color:var(--text2)}
+.fb-card .fb-card-body{font-size:.78rem;color:var(--text2);line-height:1.6;white-space:pre-wrap}
+.fb-card .fb-card-type{font-size:.62rem;padding:2px 8px;border-radius:6px;font-weight:600}
+.fb-type-class{background:var(--blue-light);color:var(--blue-dark)}
+.fb-type-personal{background:var(--green-light);color:var(--green-dark)}
+
 /* 弹窗 */
 .modal-mask{position:fixed;inset:0;background:rgba(20,22,40,.5);z-index:100;display:flex;align-items:flex-end;justify-content:center;animation:fadeIn .2s}
 @media(min-width:720px){.modal-mask{align-items:center}}
@@ -225,12 +245,13 @@ label{font-size:.82rem;color:var(--text2);display:block;margin:10px 0 5px}
     <img class="drawer-logo" src="icon-192.png" alt="logo">
     <div>
       <div class="dn" id="drawer-name">晓彤的书屋</div>
-      <div class="dv">管理后台 <span id="ver-tag">v2.0.0</span></div>
+      <div class="dv">管理后台 <span id="ver-tag">v2.4.0</span></div>
     </div>
   </div>
   <div class="drawer-menu" id="drawer-menu">
     <button data-page="dash" class="active" onclick="go('dash')"><span class="mi">📊</span>工作台</button>
     <button data-page="lesson" onclick="go('lesson')"><span class="mi">✅</span>考勤管理（记课）</button>
+    <button data-page="feedback" onclick="go('feedback')"><span class="mi">📝</span>课后反馈</button>
     <button data-page="schedule" onclick="go('schedule')"><span class="mi">🗓️</span>课程表</button>
     <button data-page="expense" onclick="go('expense')"><span class="mi">💰</span>收费管理（收支）</button>
     <button data-page="me" onclick="go('me')"><span class="mi">🧑‍🎓</span>学生资料</button>
@@ -258,6 +279,13 @@ label{font-size:.82rem;color:var(--text2);display:block;margin:10px 0 5px}
       <div class="bc-label">待办提醒</div>
       <div class="bc-num red" id="todo-num">0</div>
       <div class="bc-sub" id="todo-sub"></div>
+    </div>
+    <!-- 课后反馈 -->
+    <div class="big-card" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;cursor:pointer" onclick="go('feedback')">
+      <span class="bc-link" style="color:rgba(255,255,255,.8)" onclick="event.stopPropagation();go('feedback')">去反馈 ›</span>
+      <div class="bc-label" style="color:rgba(255,255,255,.85)">📝 课后反馈</div>
+      <div class="bc-num" style="color:#fff" id="fb-today-count">0</div>
+      <div class="bc-sub" style="color:rgba(255,255,255,.8)" id="fb-today-sub">今日尚无反馈</div>
     </div>
     <!-- 近7日收入柱状图 -->
     <div class="big-card">
@@ -303,6 +331,20 @@ label{font-size:.82rem;color:var(--text2);display:block;margin:10px 0 5px}
     <div class="section-title">学生课时统计（消耗 & 剩余）</div>
     <div class="card" id="stu-lesson-stats"></div>
   </div>
+</div>
+
+<!-- ===== 课后反馈 ===== -->
+<div id="page-feedback" class="hidden">
+  <div class="page" style="padding-top:14px">
+    <div class="seg" id="fb-seg">
+      <button data-m="class" class="on" onclick="setFbMode('class')">📖 班级反馈</button>
+      <button data-m="personal" onclick="setFbMode('personal')">🧑 个人反馈</button>
+      <button data-m="history" onclick="setFbMode('history')">📜 历史记录</button>
+    </div>
+    <div id="fb-editor"></div>
+    <div id="fb-history"></div>
+  </div>
+  <button class="fab" onclick="openFbEditor()">＋</button>
 </div>
 
 <!-- ===== 支出（收费） ===== -->
@@ -365,12 +407,12 @@ label{font-size:.82rem;color:var(--text2);display:block;margin:10px 0 5px}
 /* ================= 数据层（IndexedDB + 云端同步） ================= */
 const KEY='kgj_data_v1';           // 旧 localStorage 键（迁移用）
 const IDB_NAME='kgj_db', IDB_STORE='kv';
-const APP_VER='v2.0.0';
+const APP_VER='v2.4.2';
 const CATS=[{k:'油费',e:'⛽'},{k:'停车费',e:'🅿️'},{k:'过路费',e:'🛣️'},{k:'餐费',e:'🍜'},{k:'教具',e:'📚'},{k:'其他',e:'📦'}];
 const WD=['一','二','三','四','五','六','日'];
 const DEFAULT_ORG='晓彤的书屋';
 
-function blankDB(){return {students:[],courses:[],lessons:[],expenses:[],dayMarks:{},settings:{orgName:DEFAULT_ORG}};}
+function blankDB(){return {students:[],courses:[],lessons:[],expenses:[],dayMarks:{},feedbacks:[],settings:{orgName:DEFAULT_ORG}};}
 let DB=blankDB();          // 内存中的数据（渲染都读它）
 let META={syncKey:'',updatedAt:0};
 
@@ -415,7 +457,7 @@ function normalize(d){
     if(!c.priceMode)c.priceMode='total';
     if(!c.totalLessons)c.totalLessons=0;
   });
-  // 清理学生旧字段（课时由班级统一管理）
+  if(!out.feedbacks)out.feedbacks=[];
   out.students.forEach(s=>{delete s.totalLessons;delete s.rate;});
   return out;
 }
@@ -521,7 +563,7 @@ function todayProgress(){
 }
 
 /* ================= 抽屉导航 ================= */
-const PAGES=['dash','schedule','lesson','expense','me'];
+const PAGES=['dash','schedule','lesson','feedback','expense','me'];
 function openDrawer(){document.getElementById('drawer').classList.add('open');document.getElementById('drawer-mask').classList.add('open');}
 function closeDrawer(){document.getElementById('drawer').classList.remove('open');document.getElementById('drawer-mask').classList.remove('open');}
 function go(p,anchor){
@@ -533,7 +575,7 @@ function go(p,anchor){
   if(anchor==='setting')setTimeout(()=>document.getElementById('setting-anchor').scrollIntoView({behavior:'smooth'}),80);
   render();
 }
-function render(){renderOrg();renderDash();renderSchedule();renderLesson();renderExpense();renderMe();updateSyncBadge();}
+function render(){renderOrg();renderDash();renderSchedule();renderLesson();renderFeedback();renderExpense();renderMe();updateSyncBadge();}
 
 /* ================= 机构名 ================= */
 function renderOrg(){
@@ -600,6 +642,556 @@ function renderDash(){
     <div class="mini-card"><div class="mc-label">总支出</div><div class="mc-value" style="color:var(--red)">${fmtMoney(s.expense)}</div></div>
     <div class="mini-card"><div class="mc-label">净收入</div><div class="mc-value" style="color:${s.net>=0?'var(--blue-dark)':'var(--red)'}">${fmtMoney(s.net)}</div></div>
     <div class="mini-card"><div class="mc-label">上课 / 工作</div><div class="mc-value">${s.lessonCount}节 · ${s.workDayCount}天</div></div>`;
+  // 课后反馈卡片
+  const ds=todayStr();
+  const todayFbs=DB.feedbacks.filter(f=>f.date===ds);
+  const todayCourses=DB.courses.filter(c=>courseOnDate(c,ds));
+  const fbEl=document.getElementById('fb-today-count');
+  const fbSub=document.getElementById('fb-today-sub');
+  if(fbEl)fbEl.textContent=todayFbs.length;
+  if(fbSub){
+    const remaining=todayCourses.length-todayFbs.length;
+    fbSub.textContent=remaining>0?`今日排课 ${todayCourses.length} 节，还有 ${remaining} 节未发反馈`:(todayCourses.length?'今日反馈已全部完成 🎉':'今日无排课');
+  }
+}
+
+/* ================= 课后反馈 ================= */
+let fbMode='class';
+const FB_GOOD_TAGS=['敢于主动提问','笔记认真','思路清晰','专注听讲','积极互动','完成度高','进步明显','态度端正'];
+const FB_WARN_TAGS=['计算粗心','注意力不集中','基础薄弱','答题不规范','需多练','容易走神','不敢提问'];
+/* ===== 知识点库（按教材） ===== */
+const KP_LIB={
+  '苏科版物理':{
+    '八上·声现象':['声音的产生与传播','声音的特性','噪声及其控制','人耳听不见的声音','声现象实验'],
+    '八上·物态变化':['温度与温度计','熔化和凝固','汽化和液化','升华和凝华','水循环'],
+    '八上·光现象':['光的直线传播','小孔成像','光的反射','平面镜成像','光的折射','光的色散'],
+    '八上·透镜':['透镜基础','凸透镜成像规律','生活中的透镜','眼睛与眼镜','显微镜望远镜'],
+    '八上·物体的运动':['长度和时间测量','速度','直线运动','运动的相对性'],
+    '八下·物质的物理属性':['质量及其测量','密度','测量密度','物质的物理属性','新材料'],
+    '八下·从粒子到宇宙':['分子动理论','原子结构','宇宙探秘'],
+    '八下·力':['力的大小方向','弹力与弹簧测力计','重力','摩擦力','力的示意图'],
+    '八下·力与运动':['牛顿第一定律','二力平衡','力和运动关系','惯性'],
+    '八下·压强和浮力':['压强','液体压强','气体压强','流体压强与流速','浮力','阿基米德原理','物体的浮沉条件'],
+    '九上·简单机械和功':['杠杆','滑轮','功','功率','机械效率'],
+    '九上·机械能和内能':['动能势能机械能','内能 热量','比热容','机械能与内能转化','热机'],
+    '九上·电路探秘':['初识家用电器和电路','电路连接方式','电流','电压','电阻','欧姆定律','串并联电路'],
+    '九上·电功和电热':['电能表与电功','电功率','电热器 电流的热效应','家庭安全用电'],
+    '九下·电磁转换':['磁体与磁场','电流的磁场','磁场对电流的作用','电动机','电磁感应 发电机'],
+    '九下·能源与可持续发展':['能源利用','核能','太阳能','能量守恒']
+  },
+  '人教版化学':{
+    '九上·走进化学世界':['物质的变化和性质','化学实验基础','药品取用规则','常见仪器使用'],
+    '九上·我们周围的空气':['空气的组成','氧气','制取氧气','催化剂'],
+    '九上·物质构成的奥秘':['分子和原子','原子的结构','元素','离子','化学式与化合价'],
+    '九上·自然界的水':['水的组成','净化水','水的硬水软水','氢气'],
+    '九上·化学方程式':['质量守恒定律','化学方程式的书写','化学方程式计算'],
+    '九上·碳和碳的氧化物':['碳单质','二氧化碳制取','二氧化碳性质','一氧化碳'],
+    '九上·燃料及其利用':['燃烧条件','灭火原理','化石燃料','燃料与环境'],
+    '九下·金属和金属材料':['金属材料','金属化学性质','金属活动性顺序','铁的冶炼','金属防护'],
+    '九下·溶液':['溶液的形成','溶解度','溶质质量分数','溶液配制'],
+    '九下·酸和碱':['酸碱指示剂','常见酸和碱','酸碱中和反应','pH'],
+    '九下·盐 化肥':['常见盐','化学肥料','复分解反应','物质除杂鉴别'],
+    '九下·化学与生活':['营养素','化学元素与人体健康','有机合成材料']
+  },
+  '自定义':{}
+};
+/* ===== 课堂表现预设（个人反馈，多选） ===== */
+const FB_BEHAVIOR_TAGS=['整体状态在线','跟得上节奏','思维反应快','基础扎实','新知识基本听懂','需课后消化','有点疲劳','状态一般','比上次有进步','配合度高'];
+/* ===== 作业预设（多选） ===== */
+const FB_HOMEWORK_TAGS=['按时按量完成','完成质量不错','正确率挺高','错题已订正','部分完成','未完成','书写工整','正确率一般','订正不彻底'];
+/* ===== 个人·知识掌握情况预设（单选，每次课都可填，不依赖小测） ===== */
+const FB_MASTER_TAGS=['一听就懂，掌握扎实','基本理解，能跟上','理解了，课后需巩固','稍慢，需要多讲几遍','比较吃力，需专项练习'];
+/* ===== 小测丢分点预设（多选） ===== */
+const FB_QUIZ_LOSS_TAGS=['概念理解题','计算题','实验探究题','拔高难题','审题不清','粗心丢分'];
+/* ===== 班级反馈预设 ===== */
+const FB_CLASS_STATUS_TAGS=['整体状态在线','听讲专注','互动积极','笔记认真','回答问题踊跃','个别同学走神','整体偏安静','状态一般','纪律良好'];
+const FB_CLASS_MASTER_TAGS=['掌握得很扎实','大体掌握了','基本理解需巩固','两极分化明显','掌握一般需加强'];
+const FB_CLASS_HW_TAGS=['全部按时提交','大部分完成','个别未交','完成质量不错','正确率挺高','正确率一般','订正不彻底','书写工整'];
+function setFbMode(m){
+  fbMode=m;
+  document.querySelectorAll('#fb-seg button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
+  document.getElementById('fb-editor').classList.toggle('hidden',m==='history');
+  document.getElementById('fb-history').classList.toggle('hidden',m!=='history');
+  renderFeedback();
+}
+function renderFeedback(){
+  if(document.getElementById('page-feedback').classList.contains('hidden'))return;
+  if(fbMode==='history'){renderFbHistory();return;}
+  // editor 区域由 openFbEditor 控制，没有打开时显示提示
+  const el=document.getElementById('fb-editor');
+  if(!el.innerHTML.trim()){
+    el.innerHTML=`<div class="empty"><div class="emoji">📝</div><p>点击右下角 ＋ 创建课后反馈<br>支持班级反馈和个人反馈</p></div>`;
+  }
+}
+function renderFbHistory(){
+  const list=[...DB.feedbacks].sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt-a.createdAt);
+  document.getElementById('fb-history').innerHTML=list.length?list.map(f=>`
+    <div class="fb-card">
+      <div class="fb-card-head">
+        <div>
+          <span class="fb-card-type ${f.type==='class'?'fb-type-class':'fb-type-personal'}">${f.type==='class'?'班级':'个人'}</span>
+          <span class="fb-card-title">${f.title}</span>
+        </div>
+        <span class="fb-card-date">${f.date}</span>
+      </div>
+      <div class="fb-card-body">${f.text.substring(0,150)}${f.text.length>150?'…':''}</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-ghost btn-sm" onclick="copyFb('${f.id}')">📋 复制</button>
+        <button class="btn btn-ghost btn-sm" onclick="editFb('${f.id}')">✏️ 编辑</button>
+        <button class="btn btn-danger btn-sm" onclick="delFb('${f.id}')">删除</button>
+      </div>
+    </div>`).join(''):`<div class="empty"><div class="emoji">📜</div><p>还没有反馈记录</p></div>`;
+}
+let editingFb=null;
+function openFbEditor(){
+  editingFb=null;
+  renderFbForm();
+}
+function editFb(id){
+  editingFb=DB.feedbacks.find(f=>f.id===id);
+  if(!editingFb)return;
+  fbMode=editingFb.type;
+  document.querySelectorAll('#fb-seg button').forEach(b=>b.classList.toggle('on',b.dataset.m===fbMode));
+  document.getElementById('fb-editor').classList.remove('hidden');
+  document.getElementById('fb-history').classList.add('hidden');
+  renderFbForm();
+}
+function renderFbForm(){
+  const ds=todayStr();
+  const todayCourses=DB.courses.filter(c=>courseOnDate(c,ds));
+  const f=editingFb;
+  const type=fbMode;
+  const selCourse=f?f.courseId:(todayCourses[0]?todayCourses[0].id:'');
+  const courseOpt=DB.courses.map(c=>`<option value="${c.id}" ${c.id===selCourse?'selected':''}>${c.name}</option>`).join('');
+  const studentOpt=(()=>{
+    const cid=document.getElementById('fb-course')?.value||selCourse;
+    const stus=cid?DB.students.filter(s=>{const c=DB.courses.find(x=>x.id===cid);return c&&c.studentIds.includes(s.id);}):DB.students;
+    return stus.map(s=>`<option value="${s.id}" ${f&&f.studentId===s.id?'selected':''}>${s.name}</option>`).join('');
+  })();
+  document.getElementById('fb-editor').innerHTML=`
+    <div class="fb-form">
+      <h4>${f?'编辑':'新建'}${type==='class'?'班级':'个人'}反馈</h4>
+      <label>选择课程</label>
+      <select id="fb-course" onchange="updFbStus()">${courseOpt||'<option>请先排课</option>'}</select>
+      ${type==='personal'?`
+      <label>选择学生</label>
+      <select id="fb-student">${studentOpt||'<option>请先添加学生</option>'}</select>
+      <label>反馈给</label>
+      <div class="fb-tags" id="fb-sendto">
+        ${['家长','学生本人','自己留存'].map(t=>`<button class="fb-tag ${f?f.sendTo===t:t==='家长'?'on':''}" data-v="${t}" onclick="document.querySelectorAll('#fb-sendto .fb-tag').forEach(b=>b.classList.remove('on'));this.classList.add('on')">${t}</button>`).join('')}
+      </div>`:''}
+      <label>上课日期</label>
+      <input id="fb-date" type="date" value="${f?f.date:ds}">
+      ${type==='personal'?`
+      <label>课型</label>
+      <select id="fb-lessontype">
+        <option value="常规课" ${f&&f.lessonType==='常规课'?'selected':''}>常规课</option>
+        <option value="复习课" ${f&&f.lessonType==='复习课'?'selected':''}>复习课</option>
+        <option value="测试课" ${f&&f.lessonType==='测试课'?'selected':''}>测试课</option>
+        <option value="习题课" ${f&&f.lessonType==='习题课'?'selected':''}>习题课</option>
+      </select>`:''}
+      <label>📖 教材版本</label>
+      <select id="fb-book" onchange="renderKpChapters()">
+        ${Object.keys(KP_LIB).map(b=>`<option value="${b}" ${f&&f.book===b?'selected':''}>${b}</option>`).join('')}
+      </select>
+      <label>章节</label>
+      <select id="fb-chapter" onchange="renderKpTags()">
+        <option value="">选择章节</option>
+        ${Object.keys(KP_LIB[document.getElementById('fb-book')?.value||'苏科版物理']||{}).map(ch=>`<option value="${ch}" ${f&&f.chapter===ch?'selected':''}>${ch}</option>`).join('')}
+      </select>
+      <label>知识点（可多选）</label>
+      <div style="display:flex;gap:8px;margin-bottom:6px">
+        <button class="btn btn-ghost btn-sm" onclick="openKpPhotoOcr()">📷 拍照识别错题知识点</button>
+      </div>
+      <div class="fb-tags" id="fb-kp-tags"></div>
+      <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
+        <input id="fb-kp-custom" placeholder="手动补充知识点" style="flex:1;padding:8px 10px;font-size:.82rem">
+        <button class="btn btn-ghost btn-sm" style="flex:none" onclick="addKpCustom()">＋加入</button>
+      </div>
+      <div class="m-sub" id="fb-kp-selected" style="margin-top:8px"></div>
+      ${type==='personal'?`
+      <label>补充说明</label>
+      <textarea id="fb-content-note" rows="2" placeholder="如：重点练了实验题、讲了错题">${f?f.contentNote:''}</textarea>
+      <label>🙂 课堂表现（可多选）</label>
+      <div class="fb-tags" id="fb-behavior-tags">
+        ${FB_BEHAVIOR_TAGS.map(t=>`<button class="fb-tag ${f&&f.behaviorTags&&f.behaviorTags.includes(t)?'on':''}" onclick="this.classList.toggle('on')">${t}</button>`).join('')}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:6px;align-items:center">
+        <input id="fb-behavior-custom" placeholder="手动补充表现" style="flex:1;padding:8px 10px;font-size:.82rem">
+        <button class="btn btn-ghost btn-sm" style="flex:none" onclick="addBehaviorCustom()">＋加入</button>
+      </div>
+      <label>✨ 值得表扬</label>
+      <div class="fb-tags" id="fb-good-tags">
+        ${FB_GOOD_TAGS.map(t=>`<button class="fb-tag ${f&&f.goodTags&&f.goodTags.includes(t)?'on good':''}" onclick="this.classList.toggle('on');this.classList.toggle('good')">${t}</button>`).join('')}
+      </div>
+      <label>🔧 需要注意</label>
+      <div class="fb-tags" id="fb-warn-tags">
+        ${FB_WARN_TAGS.map(t=>`<button class="fb-tag ${f&&f.warnTags&&f.warnTags.includes(t)?'on warn':''}" onclick="this.classList.toggle('on');this.classList.toggle('warn')">${t}</button>`).join('')}
+      </div>
+      <label>🧠 知识掌握情况（选一个）</label>
+      <div class="m-sub" style="margin-bottom:6px">不依赖小测，每节课都可以评价</div>
+      <div class="fb-tags" id="fb-master-tags">
+        ${FB_MASTER_TAGS.map(t=>`<button class="fb-tag ${f&&(f.masterTag||f.quizTag)===t?'on':''}" onclick="document.querySelectorAll('#fb-master-tags .fb-tag').forEach(b=>b.classList.remove('on'));this.classList.add('on')">${t}</button>`).join('')}
+      </div>`:''}
+      ${type==='class'?`
+      <label>🙂 上课整体状态（可多选）</label>
+      <div class="fb-tags" id="fb-class-status-tags">
+        ${FB_CLASS_STATUS_TAGS.map(t=>`<button class="fb-tag ${f&&f.classStatus&&f.classStatus.includes(t)?'on':''}" onclick="this.classList.toggle('on')">${t}</button>`).join('')}
+      </div>
+      <label>🧠 知识掌握情况（选一个）</label>
+      <div class="fb-tags" id="fb-class-master-tags">
+        ${FB_CLASS_MASTER_TAGS.map(t=>`<button class="fb-tag ${f&&f.classMaster===t?'on':''}" onclick="document.querySelectorAll('#fb-class-master-tags .fb-tag').forEach(b=>b.classList.remove('on'));this.classList.add('on')">${t}</button>`).join('')}
+      </div>
+      <label>📄 上次作业完成度（可多选）</label>
+      <div class="fb-tags" id="fb-class-hw-tags">
+        ${FB_CLASS_HW_TAGS.map(t=>`<button class="fb-tag ${f&&f.classHw&&f.classHw.includes(t)?'on':''}" onclick="this.classList.toggle('on')">${t}</button>`).join('')}
+      </div>`:''}
+      ${type==='class'?`
+      <label>📚 课后作业</label>
+      <textarea id="fb-homework" rows="2" placeholder="如：完成练习册P20-21">${f?f.homework:''}</textarea>`:''}
+      ${type==='personal'?`
+      <label>📊 课堂小测（没测可留空）</label>
+      <input id="fb-quiz-score" type="text" placeholder="如：78分（满分100）" value="${f?f.quizScore:''}">
+      <div style="font-size:.78rem;color:var(--text2);margin-top:8px">丢分点（可多选）</div>
+      <div class="fb-tags" id="fb-quiz-loss-tags">
+        ${FB_QUIZ_LOSS_TAGS.map(t=>`<button class="fb-tag ${f&&f.quizLoss&&f.quizLoss.includes(t)?'on warn':''}" onclick="this.classList.toggle('on');this.classList.toggle('warn')">${t}</button>`).join('')}
+      </div>
+      <label>📌 课后安排</label>
+      <textarea id="fb-todo" rows="2" placeholder="如：错题订正、预习下一章">${f?f.todo:''}</textarea>
+      <label>💬 给家长的话</label>
+      <textarea id="fb-parent-msg" rows="2" placeholder="如：麻烦家长督促错题重做">${f?f.parentMsg:''}</textarea>`:''}
+      <div class="m-actions" style="margin-top:14px">
+        <button class="btn btn-ghost" onclick="generateFbText()">生成话术</button>
+        <button class="btn btn-primary" onclick="saveFb()">保存</button>
+      </div>
+      <div id="fb-preview-area"></div>
+    </div>`;
+  // 渲染知识点标签
+  const savedKps=f?f.kps||[]:[];
+  setTimeout(()=>renderKpTags(savedKps),0);
+}
+/* 知识点章节渲染 */
+function renderKpChapters(){
+  const book=document.getElementById('fb-book').value;
+  const chapterSel=document.getElementById('fb-chapter');
+  chapterSel.innerHTML='<option value="">选择章节</option>'+Object.keys(KP_LIB[book]||{}).map(ch=>`<option value="${ch}">${ch}</option>`).join('');
+  renderKpTags();
+}
+function renderKpTags(savedKps){
+  const book=document.getElementById('fb-book')?.value;
+  const chapter=document.getElementById('fb-chapter')?.value;
+  const box=document.getElementById('fb-kp-tags');
+  if(!box)return;
+  const kps=(chapter&&KP_LIB[book]&&KP_LIB[book][chapter])?KP_LIB[book][chapter]:[];
+  const selected=savedKps||getSelectedKps();
+  box.innerHTML=kps.length?kps.map(k=>`<button class="fb-tag ${selected.includes(k)?'on':''}" onclick="this.classList.toggle('on');updKpSelected()">${k}</button>`).join(''):'<span style="font-size:.78rem;color:var(--text2)">选择章节后显示知识点，或手动补充</span>';
+  updKpSelected();
+}
+function getSelectedKps(){
+  return [...document.querySelectorAll('#fb-kp-tags .fb-tag.on')].map(b=>b.textContent);
+}
+function updKpSelected(){
+  const sel=getSelectedKps();
+  const el=document.getElementById('fb-kp-selected');
+  if(el)el.innerHTML=sel.length?`已选 ${sel.length} 个：${sel.join('、')}`:'';
+}
+function addKpCustom(){
+  const inp=document.getElementById('fb-kp-custom');
+  const v=inp.value.trim();
+  if(!v)return;
+  const box=document.getElementById('fb-kp-tags');
+  const btn=document.createElement('button');
+  btn.className='fb-tag on';
+  btn.textContent=v;
+  btn.onclick=function(){this.classList.toggle('on');updKpSelected();};
+  box.appendChild(btn);
+  inp.value='';
+  updKpSelected();
+}
+function addBehaviorCustom(){
+  const inp=document.getElementById('fb-behavior-custom');
+  const v=inp.value.trim();
+  if(!v)return;
+  const box=document.getElementById('fb-behavior-tags');
+  const btn=document.createElement('button');
+  btn.className='fb-tag on';
+  btn.textContent=v;
+  btn.onclick=function(){this.classList.toggle('on');};
+  box.appendChild(btn);
+  inp.value='';
+}
+function updFbStus(){
+  // 刷新学生下拉
+  const cid=document.getElementById('fb-course').value;
+  const stus=DB.students.filter(s=>{const c=DB.courses.find(x=>x.id===cid);return c&&c.studentIds.includes(s.id);});
+  const sel=document.getElementById('fb-student');
+  if(sel)sel.innerHTML=stus.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+}
+function generateFbText(){
+  const type=fbMode;
+  const course=DB.courses.find(c=>c.id===document.getElementById('fb-course').value);
+  const courseName=course?course.name:'课程';
+  const date=document.getElementById('fb-date').value;
+  const kps=getSelectedKps();
+  const chapter=document.getElementById('fb-chapter')?.value||'';
+  const homework=document.getElementById('fb-homework')?.value.trim()||'';
+  let text='';
+  if(type==='class'){
+    // ===== 班级反馈：口语版 =====
+    const classStatus=[...document.querySelectorAll('#fb-class-status-tags .fb-tag.on')].map(b=>b.textContent);
+    const classMasterBtn=document.querySelector('#fb-class-master-tags .fb-tag.on');
+    const classMaster=classMasterBtn?classMasterBtn.textContent:'';
+    const classHw=[...document.querySelectorAll('#fb-class-hw-tags .fb-tag.on')].map(b=>b.textContent);
+    text=`【${courseName} · 今日课堂】\n📅 ${date}\n\n📖 今天讲了\n`;
+    if(chapter)text+=`（${chapter}）\n`;
+    if(kps.length)text+=kps.map(k=>'• '+k).join('\n')+'\n';
+    if(classStatus.length){
+      text+=`\n🙂 上课状态\n今天班里${classStatus.join('，')}，整体氛围不错~\n`;
+    }
+    if(classMaster){
+      text+=`\n🧠 掌握情况\n从课堂反应来看，${classMaster}。`;
+      if(classMaster.includes('需')||classMaster.includes('一般')||classMaster.includes('分化'))text+=`不用太担心，后面课上我们会带着大家多练多巩固~\n`;
+      else text+=`继续保持！\n`;
+    }
+    if(classHw.length){
+      text+=`\n📄 上次作业\n${classHw.join('，')}，给孩子们点个赞👍\n`;
+    }
+    text+=`\n📚 课后作业\n${homework||'今天没有作业，好好休息~'}`;
+  }else{
+    // ===== 个人反馈：口语化完整版 =====
+    const lessonType=document.getElementById('fb-lessontype').value;
+    const sendToBtn=document.querySelector('#fb-sendto .fb-tag.on');
+    const sendTo=sendToBtn?sendToBtn.dataset.v:'家长';
+    const contentNote=document.getElementById('fb-content-note').value.trim();
+    const quizScore=document.getElementById('fb-quiz-score').value.trim();
+    const masterTagBtn=document.querySelector('#fb-master-tags .fb-tag.on');
+    const masterTag=masterTagBtn?masterTagBtn.textContent:'';
+    const quizLoss=[...document.querySelectorAll('#fb-quiz-loss-tags .fb-tag.on')].map(b=>b.textContent);
+    const todo=document.getElementById('fb-todo').value.trim();
+    const parentMsg=document.getElementById('fb-parent-msg').value.trim();
+    const stu=DB.students.find(s=>s.id===document.getElementById('fb-student').value);
+    const studentName=stu?stu.name:'';
+    const behaviorTags=[...document.querySelectorAll('#fb-behavior-tags .fb-tag.on')].map(b=>b.textContent);
+    const goodTags=[...document.querySelectorAll('#fb-good-tags .fb-tag.on')].map(b=>b.textContent);
+    const warnTags=[...document.querySelectorAll('#fb-warn-tags .fb-tag.on')].map(b=>b.textContent);
+
+    // 口语化称呼
+    const isToParent=sendTo==='家长';
+    const callName=isToParent?studentName:(sendTo==='学生本人'?'你':'');
+    text=`【${courseName} · 课后反馈】${studentName}\n📅 ${date} · ${lessonType}\n\n📖 今天学了\n`;
+    if(chapter)text+=`（${chapter}）\n`;
+    if(kps.length)text+=kps.map(k=>'• '+k).join('\n')+'\n';
+    if(contentNote)text+=`${contentNote}\n`;
+    // 课堂表现（口语拼接）
+    const behParts=[];
+    if(behaviorTags.length)behParts.push(behaviorTags.join('，'));
+    if(goodTags.length)behParts.push(`值得夸一夸的是${goodTags.join('、')}`);
+    if(warnTags.length)behParts.push(`${warnTags.join('、')}这些问题，后面课上我会多帮${isToParent?studentName:'你'}盯着`);
+    if(behParts.length){
+      text+=`\n🙂 课堂表现\n${isToParent?studentName+'今天':''}${behParts.shift()}`;
+      if(behParts.length)text+='，'+behParts.join('，');
+      text+='。'+'\n';
+    }
+    // 作业（仅班级反馈有作业区块；个人反馈不输出作业段落）
+    // 知识掌握情况（独立段落，不依赖小测）
+    if(masterTag){
+      text+=`\n🧠 掌握情况\n`;
+      const who=isToParent?studentName:'你';
+      if(masterTag.includes('扎实'))text+=`${who}这块新知识一听就懂，掌握得很扎实，吸收得特别快👍\n`;
+      else if(masterTag.includes('能跟上'))text+=`${who}对新知识基本理解了，能跟上节奏，课后做题再巩固一下会更稳~\n`;
+      else if(masterTag.includes('巩固'))text+=`${who}课上的内容是理解了的，但要多练才能记牢，课后作业认真完成很关键~\n`;
+      else if(masterTag.includes('多讲几遍'))text+=`这次的新内容${who}接受得稍慢一些，不用着急，后面课上我会放慢节奏、多带着过几遍~\n`;
+      else text+=`这块内容${who}目前还有点吃力，我近期会安排专项练习重点突破，也请家长多给一些鼓励~\n`;
+    }
+    // 小测（只有填了分数或丢分点才输出，没测自动跳过）
+    if(quizScore||quizLoss.length){
+      text+=`\n📊 课堂小测\n`;
+      if(quizScore)text+=`这次小测考了 ${quizScore}`;
+      if(quizLoss.length)text+=`${quizScore?'，':'这次'}丢分主要在${quizLoss.join('、')}这块儿`;
+      text+=`，${isToParent?'家长不用太着急':'不用太着急'}，后面我会带着${isToParent?'孩子':'你'}专门再练一遍~\n`;
+    }
+    if(todo)text+=`\n📌 课后安排\n${todo}\n`;
+    if(parentMsg)text+=`\n💬 给家长的话\n${parentMsg}\n`;
+    else if(isToParent&&(warnTags.length||quizLoss.length))text+=`\n💬 给家长的话\n麻烦家长平时多督促一下错题重做，有问题随时和我沟通~\n`;
+  }
+  document.getElementById('fb-preview-area').innerHTML=`
+    <div class="fb-preview">${escapeHtml(text)}</div>
+    <div class="m-actions" style="margin-top:10px">
+      <button class="btn btn-primary" onclick="copyText(${JSON.stringify(text)})">📋 复制文案</button>
+      <button class="btn btn-ghost" onclick="saveFbWithText(${JSON.stringify(text).replace(/"/g,'&quot;')})">💾 保存并复制</button>
+    </div>`;
+}
+function escapeHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function copyText(t){navigator.clipboard.writeText(t).then(()=>toast('已复制到剪贴板 ✓')).catch(()=>{const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('已复制 ✓');});}
+function copyFb(id){const f=DB.feedbacks.find(x=>x.id===id);if(!f)return;copyText(f.text);}
+function saveFbWithText(text){
+  saveFb(text);
+  copyText(text);
+}
+function saveFb(presetText){
+  const type=fbMode;
+  const course=DB.courses.find(c=>c.id===document.getElementById('fb-course').value);
+  const courseName=course?course.name:'课程';
+  const studentId=type==='personal'?(document.getElementById('fb-student')?.value||''):'';
+  const studentName=studentId?(DB.students.find(s=>s.id===studentId)||{}).name||'':'';
+  const text=presetText||document.getElementById('fb-preview-area')?.textContent||'';
+  if(!text&&!presetText){toast('请先点「生成话术」');return;}
+  const data={
+    id:editingFb?editingFb.id:uid(),
+    type,courseId:course?course.id:'',courseName,studentId,studentName,
+    title:type==='class'?courseName:`${courseName} · ${studentName}`,
+    date:document.getElementById('fb-date').value,
+    lessonType:type==='personal'?(document.getElementById('fb-lessontype')?.value||''):'',
+    sendTo:type==='personal'?(document.querySelector('#fb-sendto .fb-tag.on')?.dataset.v||'家长'):'',
+    book:document.getElementById('fb-book')?.value||'',
+    chapter:document.getElementById('fb-chapter')?.value||'',
+    kps:getSelectedKps(),
+    classStatus:type==='class'?[...document.querySelectorAll('#fb-class-status-tags .fb-tag.on')].map(b=>b.textContent):[],
+    classMaster:type==='class'?(document.querySelector('#fb-class-master-tags .fb-tag.on')?.textContent||''):'',
+    classHw:type==='class'?[...document.querySelectorAll('#fb-class-hw-tags .fb-tag.on')].map(b=>b.textContent):[],
+    contentNote:type==='personal'?(document.getElementById('fb-content-note')?.value||''):'',
+    behaviorTags:type==='personal'?[...document.querySelectorAll('#fb-behavior-tags .fb-tag.on')].map(b=>b.textContent):[],
+    goodTags:type==='personal'?[...document.querySelectorAll('#fb-good-tags .fb-tag.on')].map(b=>b.textContent):[],
+    warnTags:type==='personal'?[...document.querySelectorAll('#fb-warn-tags .fb-tag.on')].map(b=>b.textContent):[],
+    homework:type==='class'?(document.getElementById('fb-homework')?.value||''):'',
+    quizScore:type==='personal'?(document.getElementById('fb-quiz-score')?.value||''):'',
+    masterTag:type==='personal'?(document.querySelector('#fb-master-tags .fb-tag.on')?.textContent||''):'',
+    quizLoss:type==='personal'?[...document.querySelectorAll('#fb-quiz-loss-tags .fb-tag.on')].map(b=>b.textContent):[],
+    todo:type==='personal'?(document.getElementById('fb-todo')?.value||''):'',
+    parentMsg:type==='personal'?(document.getElementById('fb-parent-msg')?.value||''):'',
+    text:presetText||text,
+    createdAt:editingFb?editingFb.createdAt:Date.now()
+  };
+  if(editingFb){Object.assign(editingFb,data);}
+  else DB.feedbacks.push(data);
+  save();renderFeedback();renderDash();
+  toast(editingFb?'已更新 ✓':'已保存 ✓');
+  document.getElementById('fb-editor').innerHTML='';
+}
+function delFb(id){
+  if(!confirm('删除这条反馈？'))return;
+  DB.feedbacks=DB.feedbacks.filter(f=>f.id!==id);
+  save();renderFeedback();renderDash();toast('已删除');
+}
+
+/* ===== 拍照识别错题知识点 ===== */
+function openKpPhotoOcr(){
+  openModal(`
+    <h3>📷 拍照识别知识点</h3>
+    <div class="m-sub">拍作业/试卷照片，自动识别文字并匹配知识点（印刷体效果最好）</div>
+    <input type="file" id="kp-ocr-file" accept="image/*" capture="environment">
+    <div id="kp-ocr-status"></div>
+    <div id="kp-ocr-result"></div>
+    <div class="m-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" id="kp-ocr-apply" style="display:none" onclick="applyKpOcr()">✅ 应用到反馈</button>
+    </div>`);
+  document.getElementById('kp-ocr-file').addEventListener('change',runKpOcr);
+}
+let kpOcrMatched=[];
+async function runKpOcr(e){
+  const file=e.target.files[0];if(!file)return;
+  const st=document.getElementById('kp-ocr-status');
+  st.innerHTML=`<div class="ocr-progress">正在识别图片文字…<span id="kp-pct">0%</span><div class="bar"><i id="kp-bar" style="width:0%"></i></div></div>`;
+  try{
+    const res=await Tesseract.recognize(file,'chi_sim+eng',{
+      logger:m=>{if(m.status==='recognizing text'){const p=Math.round(m.progress*100);const pc=document.getElementById('kp-pct');const pb=document.getElementById('kp-bar');if(pc)pc.textContent=p+'%';if(pb)pb.style.width=p+'%';}}
+    });
+    const text=res.data.text.replace(/\s+/g,'');
+    // 全库关键词匹配：知识点名 → 核心词
+    const book=document.getElementById('fb-book')?.value;
+    const matches=[];
+    const lib=book&&book!=='自定义'?{[book]:KP_LIB[book]}:KP_LIB;
+    Object.entries(lib).forEach(([bk,chapters])=>{
+      Object.entries(chapters).forEach(([ch,kps])=>{
+        kps.forEach(kp=>{
+          // 核心词：取知识点名称的关键部分（去空格，取2字以上片段）
+          const words=extractKpWords(kp);
+          if(words.some(w=>text.includes(w))){
+            matches.push({book:bk,chapter:ch,kp});
+          }
+        });
+      });
+    });
+    // 去重
+    kpOcrMatched=[...new Map(matches.map(m=>[m.book+m.chapter+m.kp,m])).values()];
+    st.innerHTML=`<div class="ocr-progress" style="background:var(--green-light);color:#166534">✅ 识别完成，匹配到 ${kpOcrMatched.length} 个知识点<div class="ocr-result-box" style="max-height:120px;overflow:auto">${text.replace(/</g,'&lt;').slice(0,500)||'（无文字）'}</div></div>`;
+    renderKpOcrResult();
+  }catch(err){
+    st.innerHTML=`<div class="ocr-progress" style="background:var(--red-light);color:var(--red)">识别失败：${err.message||err}<br>可换更清晰的图片重试</div>`;
+  }
+}
+/* 知识点名提取核心词 */
+function extractKpWords(kp){
+  const clean=kp.replace(/\s+/g,'');
+  const words=[];
+  // 完整名
+  if(clean.length>=2)words.push(clean);
+  // 按常见分隔拆
+  clean.split(/[·，,、]/).forEach(seg=>{
+    const s=seg.trim();
+    if(s.length>=2)words.push(s);
+  });
+  // 核心物理化学词汇（2-3字，容易在题目中出现）
+  const coreDict=['声音','音调','响度','音色','噪声','熔化','凝固','汽化','液化','升华','凝华','蒸发','沸腾','温度','直线传播','反射','平面镜','折射','色散','透镜','凸透镜','凹透镜','成像','近视','远视','显微镜','望远镜','速度','匀速','变速','长度','时间','质量','密度','天平','量筒','分子','原子','质子','中子','电子','离子','扩散','引力','斥力','弹力','弹簧测力计','重力','摩擦力','惯性','二力平衡','平衡 state','压强','液体压强','大气压','流速','浮力','阿基米德','漂浮','悬浮','下沉','杠杆','支点','力臂','滑轮','定滑轮','动滑轮','功','功率','机械效率','动能','势能','机械能','内能','热量','比热容','热机','热值','电荷','电流','电压','电阻','电路','串联','并联','短路','断路','安培','伏特','欧姆','电功','电能','电功率','额定电压','额定功率','电热','熔断器','三孔插座','磁体','磁场','磁感线','通电螺线管','电磁铁','电动机','发电机','电磁感应','能源','核能','太阳能','化学变化','物理变化','化学性质','物理性质','实验','药品','仪器','试管','烧杯','酒精灯','量筒','空气','氧气','氮气','稀有气体','二氧化碳','催化剂','分解','化合','元素','元素周期表','分子','原子','离子','化合价','化学式','相对分子质量','纯净物','混合物','单质','化合物','氧化物','水','蒸馏','硬水','软水','过滤','吸附','沉淀','氢气','电解水','质量守恒','化学方程式','配平','相对分子质量','碳','金刚石','石墨','碳60','二氧化碳','一氧化碳','碳酸','碳酸盐','燃烧','灭火','着火点','化石燃料','煤','石油','天然气','金属','合金','铁','生铁','钢','铝','铜','活动性','置换','氧化物','还原','铁矿石','生锈','防锈','溶液','溶质','溶剂','饱和','不饱和','溶解度','结晶','质量分数','浓溶液','稀溶液','酸','碱','盐酸','硫酸','硝酸','氢氧化钠','氢氧化钙','pH','酸碱指示剂','石蕊','酚酞','中和','盐','氯化钠','碳酸钠','碳酸氢钠','碳酸钙','化肥','氮肥','磷肥','钾肥','复分解','沉淀','气体','蛋白质','糖类','油脂','维生素','钙','铁','锌','材料','塑料','合成纤维','合成橡胶'];
+    coreDict.forEach(w=>{if(clean.includes(w))words.push(w);});
+  return [...new Set(words)];
+}
+function renderKpOcrResult(){
+  const box=document.getElementById('kp-ocr-result');
+  if(!kpOcrMatched.length){
+    box.innerHTML=`<div class="m-sub">没有自动匹配到知识点，请手动选择或补充</div>`;
+    return;
+  }
+  // 按章节分组
+  const groups={};
+  kpOcrMatched.forEach(m=>{
+    const key=m.book+' · '+m.chapter;
+    (groups[key]=groups[key]||[]).push(m.kp);
+  });
+  box.innerHTML=Object.entries(groups).map(([g,kps])=>`
+    <div style="margin-top:8px">
+      <div style="font-size:.75rem;color:var(--text2)">${g}</div>
+      <div class="fb-tags" style="margin-top:4px">
+        ${kps.map(k=>`<button class="fb-tag on" onclick="this.classList.toggle('on')">${k}</button>`).join('')}
+      </div>
+    </div>`).join('');
+  document.getElementById('kp-ocr-apply').style.display='';
+}
+function applyKpOcr(){
+  // 收集勾选的知识点
+  const chosen=[...document.querySelectorAll('#kp-ocr-result .fb-tag.on')].map(b=>b.textContent);
+  if(!chosen.length)return toast('请至少勾选一个知识点');
+  // 找到第一个匹配的章节，切换教材和章节
+  const first=kpOcrMatched.find(m=>chosen.includes(m.kp));
+  if(first){
+    const bookSel=document.getElementById('fb-book');
+    if(bookSel){bookSel.value=first.book;renderKpChapters();}
+    const chSel=document.getElementById('fb-chapter');
+    if(chSel)chSel.value=first.chapter;
+  }
+  closeModal();
+  // 渲染该章节知识点，然后勾选匹配的
+  setTimeout(()=>{
+    renderKpTags();
+    setTimeout(()=>{
+      document.querySelectorAll('#fb-kp-tags .fb-tag').forEach(b=>{
+        if(chosen.includes(b.textContent))b.classList.add('on');
+      });
+      // 不在该章节的知识点，追加进去
+      const box=document.getElementById('fb-kp-tags');
+      const existing=[...document.querySelectorAll('#fb-kp-tags .fb-tag')].map(b=>b.textContent);
+      chosen.filter(k=>!existing.includes(k)).forEach(k=>{
+        const btn=document.createElement('button');
+        btn.className='fb-tag on';
+        btn.textContent=k;
+        btn.onclick=function(){this.classList.toggle('on');updKpSelected();};
+        box.appendChild(btn);
+      });
+      updKpSelected();
+      toast(`已应用 ${chosen.length} 个知识点 ✓`);
+    },50);
+  },50);
 }
 
 /* ================= 课表 ================= */
