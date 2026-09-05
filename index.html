@@ -407,7 +407,7 @@ label{font-size:.82rem;color:var(--text2);display:block;margin:10px 0 5px}
 /* ================= 数据层（IndexedDB + 云端同步） ================= */
 const KEY='kgj_data_v1';           // 旧 localStorage 键（迁移用）
 const IDB_NAME='kgj_db', IDB_STORE='kv';
-const APP_VER='v2.5.0';
+const APP_VER='v2.5.1';
 const CATS=[{k:'油费',e:'⛽'},{k:'停车费',e:'🅿️'},{k:'过路费',e:'🛣️'},{k:'餐费',e:'🍜'},{k:'教具',e:'📚'},{k:'其他',e:'📦'}];
 const WD=['一','二','三','四','五','六','日'];
 const DEFAULT_ORG='晓彤的书屋';
@@ -2314,6 +2314,12 @@ if('serviceWorker' in navigator){
     if(refreshing)return;refreshing=true;location.reload();
   });
 }
+// 兜底：检测到旧版页面残留时强制刷新（解决 SW 缓存住旧 index.html 的问题）
+(function(){
+  const seenVer=sessionStorage.getItem('seen_app_ver');
+  if(seenVer&&seenVer!==APP_VER){location.reload();}
+  sessionStorage.setItem('seen_app_ver',APP_VER);
+})();
 initDB();
 </script>
 </body>
