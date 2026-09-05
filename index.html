@@ -407,7 +407,7 @@ label{font-size:.82rem;color:var(--text2);display:block;margin:10px 0 5px}
 /* ================= 数据层（IndexedDB + 云端同步） ================= */
 const KEY='kgj_data_v1';           // 旧 localStorage 键（迁移用）
 const IDB_NAME='kgj_db', IDB_STORE='kv';
-const APP_VER='v2.4.4';
+const APP_VER='v2.5.0';
 const CATS=[{k:'油费',e:'⛽'},{k:'停车费',e:'🅿️'},{k:'过路费',e:'🛣️'},{k:'餐费',e:'🍜'},{k:'教具',e:'📚'},{k:'其他',e:'📦'}];
 const WD=['一','二','三','四','五','六','日'];
 const DEFAULT_ORG='晓彤的书屋';
@@ -475,6 +475,10 @@ async function initDB(){
     if(m)META=Object.assign(META,m);
   }catch(e){console.warn('IDB 初始化失败，退回内存模式',e);DB=blankDB();}
   render();
+  // 有未同步改动 + 已配置同步 → 1 分钟后自动补同步（网络恢复时数据自动上云）
+  if(META.dirty&&syncKeySet()){
+    setTimeout(()=>{doSync(true).catch(()=>scheduleSyncRetry());},60000);
+  }
 }
 
 /* ---- 保存：写 IndexedDB + 更新时间戳 + 标记待同步 ---- */
@@ -1953,7 +1957,7 @@ function closeModal(){document.getElementById('modal-root').innerHTML='';}
 
 /* ================= 云端同步（时间戳冲突解决） ================= */
 function genKey(){return [...crypto.getRandomValues(new Uint8Array(8))].map(b=>b.toString(16).padStart(2,'0')).join('');}
-function syncKeySet(){return !!getGitHubToken();}
+function syncKeySet(){return !!currentProvider().getToken();}
 /* 预置 Gist ID，首次同步自动拉取已有数据 */
 const PRESET_GIST='f838902646a7cedafc8974cd8b98d1ef';
 function updateSyncBadge(){
@@ -1976,12 +1980,25 @@ function updateSyncBadge(){
 }
 /* 开启同步：生成或输入同步钥匙 */
 function openSyncSetup(){
+  const prov=getSyncProvider();
   openModal(`
-    <h3>☁️ 云同步（GitHub Gist）</h3>
-    <div class="m-sub">数据存到你的 GitHub Gist，多设备同步，不需要额外服务器</div>
-    <label>GitHub Personal Access Token</label>
-    <input id="sy-key" placeholder="ghp_xxxxxxxxxx" value="${getGitHubToken()}" autocapitalize="off" autocorrect="off">
-    <div class="m-sub" style="margin-top:8px">🔑 去 <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens/new</a> 创建，勾选 <b>gist</b> 权限，有效期选 No expiration。Token 仅存你本地，不上传。</div>
+    <h3>☁️ 云同步</h3>
+    <div class="m-sub">选择同步通道：国内网络推荐 Gitee（稳定），GitHub 作备用</div>
+    <label>同步通道</label>
+    <div class="fb-tags" id="sy-prov">
+      <button class="fb-tag ${prov==='gitee'?'on':''}" data-p="gitee" onclick="pickProvider('gitee')">🇨🇳 Gitee 码云（推荐）</button>
+      <button class="fb-tag ${prov==='github'?'on':''}" data-p="github" onclick="pickProvider('github')">🐙 GitHub</button>
+    </div>
+    <div id="sy-prov-gitee" style="${prov==='gitee'?'':'display:none'}">
+      <label>Gitee 私人令牌</label>
+      <input id="sy-gitee-key" placeholder="在码云生成的令牌" value="${getGiteeToken()}" autocapitalize="off" autocorrect="off">
+      <div class="m-sub" style="margin-top:8px">🔑 没有码云账号？<a href="https://gitee.com/signup" target="_blank">手机号注册</a>（1分钟）→ 再到 <a href="https://gitee.com/profile/personal_access_tokens/new" target="_blank">生成私人令牌</a>，权限勾 <b>gists</b>（或全选）</div>
+    </div>
+    <div id="sy-prov-github" style="${prov==='github'?'':'display:none'}">
+      <label>GitHub Personal Access Token</label>
+      <input id="sy-key" placeholder="ghp_xxxxxxxxxx" value="${getGitHubToken()}" autocapitalize="off" autocorrect="off">
+      <div class="m-sub" style="margin-top:8px">🔑 去 <a href="https://github.com/settings/tokens/new" target="_blank">github.com/settings/tokens/new</a> 创建，勾选 <b>gist</b> 权限，有效期选 No expiration</div>
+    </div>
     <div class="m-actions">
       <button class="btn btn-ghost" onclick="runSyncDiag()">🔍 网络诊断</button>
       <button class="btn btn-ghost" onclick="closeModal()">取消</button>
@@ -1994,13 +2011,26 @@ function openSyncSetup(){
     <div style="margin-top:8px;padding:10px;background:var(--red-light);border-radius:10px;font-size:.78rem">⚠️ <button style="color:var(--red);font-weight:600" onclick="disableSync()">关闭云同步</button></div>`:''}
   `);
 }
+function pickProvider(p){
+  document.querySelectorAll('#sy-prov .fb-tag').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
+  document.getElementById('sy-prov-gitee').style.display=p==='gitee'?'':'none';
+  document.getElementById('sy-prov-github').style.display=p==='github'?'':'none';
+}
 async function setupSync(){
-  const t=document.getElementById('sy-key').value.trim();
-  if(!t)return toast('请填写 GitHub Token');
-  if(!t.startsWith('ghp_'))return toast('Token 格式不对，应以 ghp_ 开头');
-  setGitHubToken(t);
+  const p=document.querySelector('#sy-prov .fb-tag.on')?.dataset.p||getSyncProvider();
+  setSyncProvider(p);
+  if(p==='gitee'){
+    const t=(document.getElementById('sy-gitee-key')?.value||'').trim();
+    if(!t)return toast('请填写 Gitee 私人令牌');
+    setGiteeToken(t);
+  }else{
+    const t=(document.getElementById('sy-key')?.value||'').trim();
+    if(!t)return toast('请填写 GitHub Token');
+    if(!t.startsWith('ghp_'))return toast('Token 格式不对，应以 ghp_ 开头');
+    setGitHubToken(t);
+    META.gistId=META.gistId||PRESET_GIST;
+  }
   META.syncKey='gist';
-  META.gistId=PRESET_GIST; // 使用预置数据 Gist
   await idbSet('meta',META);
   closeModal();
   await doSync(true);
@@ -2011,123 +2041,186 @@ function fetchT(url,opt={},ms=15000){
   const t=setTimeout(()=>c.abort(),ms);
   return fetch(url,{...opt,signal:c.signal}).finally(()=>clearTimeout(t));
 }
-/* 同步网络诊断：逐步测出问题在哪 */
+/* 同步网络诊断：双通道连通性 + 当前通道深度检测 */
 async function runSyncDiag(){
-  const token=getGitHubToken();
+  const prov=getSyncProvider();
+  const P=currentProvider();
+  const giteeTok=getGiteeToken(),ghTok=getGitHubToken();
   openModal(`<h3>🔍 同步网络诊断</h3><div class="m-sub">正在测试，稍等几秒…</div><div id="diag-result" style="font-size:.82rem;line-height:2;margin-top:10px"></div>`);
   const box=document.getElementById('diag-result');
   const out=[];
   const line=(ok,msg)=>{out.push(`<div>${ok?'✅':'❌'} ${msg}</div>`);if(box)box.innerHTML=out.join('');};
-  // 1. GitHub API 连通性（无需认证）
+  // 1. Gitee 通道连通性
+  let giteeAlive=false;
+  try{
+    const r=await fetchT('https://gitee.com/api/v5/gists?access_token=x',{},10000);
+    giteeAlive=true;line(true,'Gitee（码云）通道连通正常');
+  }catch(e){line(false,'Gitee（码云）通道不通');}
+  // 2. GitHub 通道连通性
+  let ghAlive=false;
   try{
     const r=await fetchT('https://api.github.com/zen',{},10000);
-    if(r.ok)line(true,'GitHub API 连通正常');
-    else line(false,'GitHub API 异常响应（HTTP '+r.status+'）');
-  }catch(e){
-    line(false,'无法连接 api.github.com（网络被拦截或超时）');
-    if(box)box.innerHTML+=`<div style="margin-top:10px;padding:10px;background:var(--red-light,#fdeaea);border-radius:8px">💡 建议：切换手机流量（4G/5G）再试；若 WiFi 下一直失败，是路由器/运营商拦截了 GitHub</div>`;
+    if(r.ok){ghAlive=true;line(true,'GitHub 通道连通正常');}
+    else line(false,'GitHub 通道异常（HTTP '+r.status+'）');
+  }catch(e){line(false,'GitHub 通道不通（国内网络常见，属正常）');}
+  // 3. 当前通道 Token + 数据
+  if(!giteeAlive&&!ghAlive){
+    if(box)box.innerHTML+=`<div style="margin-top:10px;padding:10px;background:var(--red-light,#fdeaea);border-radius:8px">💡 两条通道都不通：检查手机是否联网；若 WiFi 下失败请切流量试</div>`;
     return;
   }
-  // 2. Token 有效性
-  if(!token){line(false,'尚未填写 Token');return;}
+  const token=P.getToken();
+  if(!token){line(false,'当前通道（'+P.name+'）尚未填写 Token');return;}
   try{
-    const r=await fetchT('https://api.github.com/rate_limit',{headers:{'Authorization':'Bearer '+token}},10000);
-    if(r.ok)line(true,'Token 有效');
-    else if(r.status===401){line(false,'Token 已失效（401），需到 GitHub 重新生成');return;}
-    else{line(false,'Token 校验异常（HTTP '+r.status+'）');return;}
+    if(prov==='gitee'){
+      if(!META.giteeGistId){line(true,'Gitee Token 已填，首次同步将自动创建云端数据');}
+      else{
+        const {parsed}=await P.pull();
+        if(parsed){
+          const when=parsed.ts?new Date(parsed.ts).toLocaleString():'未知';
+          line(true,`Gitee 云端数据可读（${(parsed.data.students||[]).length}名学生，更新于 ${when}）`);
+        }else line(false,'Gitee 云端数据文件为空');
+      }
+    }else{
+      const r=await fetchT('https://api.github.com/rate_limit',{headers:{'Authorization':'Bearer '+token}},10000);
+      if(r.ok)line(true,'GitHub Token 有效');
+      else if(r.status===401){line(false,'GitHub Token 已失效，需重新生成或切换 Gitee 通道');return;}
+      else{line(false,'GitHub Token 校验异常（HTTP '+r.status+'）');return;}
+      const {parsed}=await P.pull();
+      if(parsed){
+        const when=parsed.ts?new Date(parsed.ts).toLocaleString():'未知';
+        line(true,`GitHub 云端数据可读（${(parsed.data.students||[]).length}名学生，更新于 ${when}）`);
+      }else line(false,'GitHub 云端数据文件为空');
+    }
   }catch(e){
-    line(false,'Token 校验超时/失败');
-    if(box)box.innerHTML+=`<div style="margin-top:8px;color:var(--text2,#888)">错误：${e.name==='AbortError'?'请求超时':e.message}</div>`;
-    return;
+    line(false,'当前通道 Token/数据异常：'+(e.message||'未知'));
   }
-  // 3. Gist 数据读取
-  try{
-    const r=await fetchT('https://api.github.com/gists/'+(META.gistId||PRESET_GIST),{headers:{'Authorization':'Bearer '+token}},12000);
-    if(r.ok){
+  let tip='';
+  if(prov==='github'&&!ghAlive&&giteeAlive)tip=`💡 GitHub 不通但 Gitee 通：建议切换到 Gitee 通道（点上方「Gitee 码云」并填令牌）`;
+  else if(prov==='gitee'&&!giteeAlive&&ghAlive)tip=`💡 Gitee 不通但 GitHub 通：可切换回 GitHub 通道`;
+  if(box)box.innerHTML+=(tip?`<div style="margin-top:10px;padding:10px;background:var(--blue-light,#e8f0fe);border-radius:8px">${tip}</div>`:'')+`<div style="margin-top:8px;padding:10px;background:var(--bg2,#f5f6fa);border-radius:8px">都 ✅ 却同步失败？把结果截图发我</div>`;
+}
+/* ===== 同步通道抽象：GitHub / Gitee（码云） ===== */
+const SYNC_FILE='xiaotong-data.json';
+function getSyncProvider(){return localStorage.getItem('kgj_sync_provider')||'github';}
+function setSyncProvider(p){localStorage.setItem('kgj_sync_provider',p);}
+function getGiteeToken(){return localStorage.getItem('kgj_gitee_token')||'';}
+function setGiteeToken(t){localStorage.setItem('kgj_gitee_token',t);}
+/* 从 gist 响应中解析数据文件（兼容 GitHub 对象格式 / Gitee 数组格式） */
+function parseSyncFile(g){
+  if(!g||!g.files)return null;
+  let f=null;
+  if(Array.isArray(g.files))f=g.files.find(x=>(x.filename||x.name)===SYNC_FILE);
+  else f=g.files[SYNC_FILE];
+  if(f&&f.content){try{const d=JSON.parse(f.content);return{ts:d.updatedAt||0,data:d.data};}catch(e){return null;}}
+  return null;
+}
+const SYNC_PROVIDERS={
+  github:{
+    name:'GitHub',
+    getToken:getGitHubToken,
+    hasCloudId(){return !!(META.gistId||PRESET_GIST);},
+    async pull(){
+      const token=this.getToken();
+      const gid=META.gistId||PRESET_GIST;
+      const r=await fetchT('https://api.github.com/gists/'+gid,{headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github.v3+json'}},12000);
+      if(!r.ok)throw Object.assign(new Error('HTTP '+r.status+(r.status===401||r.status===403?'（Token无效或权限不足）':'')),{status:r.status});
+      return {parsed:parseSyncFile(await r.json()),cloudId:gid};
+    },
+    async push(payload){
+      const token=this.getToken();
+      const gid=META.gistId||PRESET_GIST;
+      const body={files:{[SYNC_FILE]:{content:JSON.stringify(payload)}}};
+      const r=await fetchT('https://api.github.com/gists/'+gid,{
+        method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)
+      },20000);
+      if(!r.ok)throw Object.assign(new Error('推送失败（HTTP '+r.status+'）'+(r.status===401?'：Token 无效':'')),{status:r.status});
       const g=await r.json();
-      const f=g.files&&g.files['xiaotong-data.json'];
-      if(f&&f.content){
-        try{
-          const p=JSON.parse(f.content);
-          const when=p.updatedAt?new Date(p.updatedAt).toLocaleString():'未知';
-          line(true,`云端数据可读（${(p.data.students||[]).length}名学生，云端更新于 ${when}）`);
-        }catch(e){line(false,'云端数据格式异常');}
-      }else line(false,'云端数据文件为空');
-    }else line(false,'Gist 读取失败（HTTP '+r.status+'）');
-  }catch(e){
-    line(false,'Gist 读取超时/失败');
+      META.gistId=g.id||gid;
+      return META.gistId;
+    }
+  },
+  gitee:{
+    name:'Gitee 码云',
+    getToken:getGiteeToken,
+    hasCloudId(){return !!META.giteeGistId;},
+    async pull(){
+      const token=this.getToken();
+      const gid=META.giteeGistId;
+      if(!gid)return {parsed:null,cloudId:null};
+      const r=await fetchT('https://gitee.com/api/v5/gists/'+gid+'?access_token='+encodeURIComponent(token),{},12000);
+      if(!r.ok)throw Object.assign(new Error('HTTP '+r.status+(r.status===401?'（Token无效）':'')),{status:r.status});
+      return {parsed:parseSyncFile(await r.json()),cloudId:gid};
+    },
+    async push(payload){
+      const token=this.getToken();
+      const gid=META.giteeGistId;
+      const body={access_token:token,files:{[SYNC_FILE]:{content:JSON.stringify(payload)}},public:false};
+      const url=gid?'https://gitee.com/api/v5/gists/'+gid+'?access_token='+encodeURIComponent(token):'https://gitee.com/api/v5/gists';
+      const r=await fetchT(url,{
+        method:gid?'PATCH':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
+      },20000);
+      if(!r.ok)throw Object.assign(new Error('推送失败（HTTP '+r.status+'）'+(r.status===401?'：Token 无效':'')),{status:r.status});
+      const g=await r.json();
+      META.giteeGistId=g.id||gid;
+      return META.giteeGistId;
+    }
   }
-  if(box)box.innerHTML+=`<div style="margin-top:10px;padding:10px;background:var(--bg2,#f5f6fa);border-radius:8px">三步都 ✅ 却同步失败？把上面结果截图发我，我来查</div>`;
+};
+function currentProvider(){return SYNC_PROVIDERS[getSyncProvider()]||SYNC_PROVIDERS.github;}
+/* 同步失败后自动补同步：每 10 分钟静默重试，成功即停 */
+let syncRetryTimer=null;
+function scheduleSyncRetry(){
+  if(syncRetryTimer)return;
+  syncRetryTimer=setInterval(async()=>{
+    if(!META.dirty){clearInterval(syncRetryTimer);syncRetryTimer=null;return;}
+    const P=currentProvider();
+    if(!P.getToken()){clearInterval(syncRetryTimer);syncRetryTimer=null;return;}
+    try{
+      await doSync(true);
+      clearInterval(syncRetryTimer);syncRetryTimer=null;
+      toast('网络恢复，已自动补同步 ✓');
+    }catch(e){/* 网络仍未恢复，下轮再试 */}
+  },10*60*1000);
 }
 /* 一键同步：推拉合并，时间戳 last-write-wins */
 let syncing=false;
-/* 云同步使用 GitHub Gist（无需后端服务器） */
 async function doSync(silent){
+  const P=currentProvider();
   if(!syncKeySet()){openSyncSetup();return;}
   if(syncing)return toast('正在同步中…');
-  const token=getGitHubToken();
-  if(!token){toast('请先在设置里填写 GitHub Token');openSyncSetup();return;}
+  const token=P.getToken();
+  if(!token){toast('请先在同步设置里填写 Token');openSyncSetup();return;}
   syncing=true;
   const btns=document.querySelectorAll('.sync-btn, #sync-btn');
   btns.forEach(b=>b.textContent='⏳');
   try{
-    const gistId=META.gistId||PRESET_GIST;
     const localTs=META.updatedAt||0;
     const isEmptyLocal=!DB.students.length&&!DB.courses.length&&!DB.lessons.length;
-    // 1. 拉云端 Gist
+    // 1. 拉云端
     let remoteTs=0,remoteData=null,remoteOk=false;
-    if(gistId){
-      const r=await fetchT('https://api.github.com/gists/'+gistId,{
-        headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github.v3+json'}
-      });
-      if(r.ok){
-        remoteOk=true;
-        const g=await r.json();
-        const f=g.files&&g.files['xiaotong-data.json'];
-        if(f&&f.content){try{const d=JSON.parse(f.content);remoteTs=d.updatedAt||0;remoteData=d.data;}catch(e){}}
-      }else if(r.status===401||r.status===403){
-        throw new Error('Token 无效或权限不足（'+r.status+'），请检查 Token 是否勾选 gist 权限');
-      }
-      // 其他状态码（如网络超时返回 0）→ remoteOk 保持 false，下面会处理
+    if(P.hasCloudId()){
+      const {parsed}=await P.pull(); // 失败会 throw（网络/Token）
+      remoteOk=true;
+      if(parsed){remoteTs=parsed.ts;remoteData=parsed.data;}
+    }else{
+      remoteOk=true; // 该通道还没有云端 gist，视为云端为空
     }
-    // 网络层失败保护：拉云端失败 + 本地为空 → 绝不推空数据覆盖云端
+    // 网络层失败保护：拉云端失败 + 本地为空 → 绝不推空数据覆盖云端（走到这里说明 pull 没 throw，此保护主要防未来改动）
     if(!remoteOk&&isEmptyLocal){
-      throw new Error('网络连接失败，无法拉取云端数据。请检查网络后重试（本地无数据时不会覆盖云端）');
+      throw new Error('网络连接失败，无法拉取云端数据（本地无数据时不会覆盖云端）');
     }
     // 2. 时间戳冲突解决：云端有新数据 OR 本地是空的 → 拉取云端
     if(remoteData&&(remoteTs>localTs||isEmptyLocal)){
-      // 云端更新 → 拉取
       DB=normalize(remoteData);
       META.updatedAt=remoteTs;
       await idbSet('data',DB);
       toast('已从云端拉取最新数据 ✓');
     }else{
-      // 本地更新 → 推送到 Gist
+      // 本地更新 → 推送
       const now=Date.now();
       META.updatedAt=now;
-      const body={
-        description:'晓彤的书屋 · 云同步数据',
-        public:false,
-        files:{'xiaotong-data.json':{content:JSON.stringify({updatedAt:now,data:DB})}}
-      };
-      let res;
-      if(gistId){
-        res=await fetchT('https://api.github.com/gists/'+gistId,{
-          method:'PATCH',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)
-        },20000);
-      }else{
-        res=await fetchT('https://api.github.com/gists',{
-          method:'POST',headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify(body)
-        },20000);
-      }
-      if(res.ok){
-        const g=await res.json();
-        META.gistId=g.id;
-        toast(silent?'已开启同步并上传 ✓':'已同步到云端 ✓');
-      }else{
-        const errTxt=await res.text().catch(()=>'');
-        throw new Error('推送失败（HTTP '+res.status+'）'+(res.status===401?'：Token 无效':''));
-      }
+      await P.push({updatedAt:now,data:DB});
+      toast(silent?'已开启同步并上传 ✓':'已同步到云端 ✓');
     }
     META.lastSync=Date.now();
     META.dirty=false;
@@ -2136,7 +2229,8 @@ async function doSync(silent){
   }catch(e){
     const msg=e.message||'未知错误';
     if(msg.includes('Failed to fetch')||msg.includes('NetworkError')||msg.includes('load failed')||msg.includes('AbortError')||msg.includes('abort')){
-      toast('同步失败：网络无法连接 GitHub（或超时），可点「我的→同步设置→网络诊断」排查');
+      toast('同步失败：'+P.name+' 网络不通（将自动重试）；也可在同步设置切换通道');
+      scheduleSyncRetry();
     }else{
       toast('同步失败：'+msg);
     }
@@ -2150,23 +2244,18 @@ async function doSync(silent){
 /* 强制从云端拉取（不推送本地），用于数据恢复 */
 async function forcePullSync(){
   if(syncing)return toast('正在同步中…');
-  const token=getGitHubToken();
-  if(!token){toast('请先填写 GitHub Token');openSyncSetup();return;}
+  const P=currentProvider();
+  const token=P.getToken();
+  if(!token){toast('请先填写 '+P.name+' 的 Token');openSyncSetup();return;}
+  if(!P.hasCloudId()){toast(P.name+' 还没有云端数据（先正常同步一次）');return;}
   if(!confirm('确认从云端拉取数据覆盖本地？\n（云端数据不会被修改）'))return;
   syncing=true;
   toast('正在从云端拉取…');
   try{
-    const gistId=META.gistId||PRESET_GIST;
-    const r=await fetchT('https://api.github.com/gists/'+gistId,{
-      headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github.v3+json'}
-    },12000);
-    if(!r.ok)throw new Error('HTTP '+r.status+(r.status===401?' Token无效':''));
-    const g=await r.json();
-    const f=g.files&&g.files['xiaotong-data.json'];
-    if(!f||!f.content)throw new Error('云端无数据文件');
-    const d=JSON.parse(f.content);
-    DB=normalize(d.data);
-    META.updatedAt=d.updatedAt||0;
+    const {parsed}=await P.pull();
+    if(!parsed||!parsed.data)throw new Error('云端无数据文件');
+    DB=normalize(parsed.data);
+    META.updatedAt=parsed.ts||0;
     META.lastSync=Date.now();
     META.dirty=false;
     await idbSet('data',DB);
@@ -2194,9 +2283,10 @@ function copySyncKey(){
 }
 /* 关闭同步（保留本地数据） */
 async function disableSync(){
-  if(!confirm('关闭云同步？本地数据保留，云端 Gist 数据不删除。'))return;
-  META.syncKey='';META.githubToken='';META.gistId='';META.lastSync=0;META.dirty=false;
+  if(!confirm('关闭云同步？本地数据保留，云端数据不删除。'))return;
+  META.syncKey='';META.githubToken='';META.gistId='';META.giteeGistId='';META.lastSync=0;META.dirty=false;
   localStorage.removeItem('kgj_gh_token');
+  localStorage.removeItem('kgj_gitee_token');
   await idbSet('meta',META);
   render();toast('已关闭云同步');
 }
